@@ -1,61 +1,70 @@
 'use strict';
 
 const env = require('../config/env');
-
 const botUsername = env.TELEGRAM_BOT_USERNAME || 'cryptogive_awayBOT';
 
 /**
- * Main menu keyboard — shown after user is verified.
+ * Start/Welcome keyboard:
+ * - Join buttons (one per requirement)
+ * - Main Menu button
+ * - Help button
+ */
+const startKeyboard = (requirements) => {
+  const rows = [];
+
+  // Join buttons for each requirement
+  requirements.forEach((req) => {
+    let label;
+    if (req.type === 'TELEGRAM') {
+      label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
+    } else {
+      label = '▶️ Subscribe YouTube Channel';
+    }
+    rows.push([{ text: label, url: req.url }]);
+  });
+
+  // Check Requirements button
+  rows.push([{ text: '✅ Check Requirements', callback_data: 'check_requirements' }]);
+
+  // Main Menu and Help
+  rows.push([
+    { text: '🏠 Main Menu', callback_data: 'main_menu' },
+    { text: 'ℹ️ Help',      callback_data: 'help' },
+  ]);
+
+  return { reply_markup: { inline_keyboard: rows } };
+};
+
+/**
+ * Main Menu keyboard:
+ * - Balance
+ * - My Referrals
+ * - Withdraw
+ * - My Referral Link
+ * - Verify Requirements
+ * - Statistics
  */
 const mainMenuKeyboard = () => ({
   reply_markup: {
     inline_keyboard: [
       [
-        { text: '💰 Balance',            callback_data: 'balance' },
-        { text: '🔗 My Referral Link',   callback_data: 'referral_link' },
+        { text: '💰 Balance',              callback_data: 'balance' },
+        { text: '👥 My Referrals',         callback_data: 'my_referrals' },
       ],
       [
-        { text: '👥 My Referrals',       callback_data: 'my_referrals' },
-        { text: '✅ Verify Requirements', callback_data: 'verify' },
+        { text: '💸 Withdraw',             callback_data: 'withdraw' },
+        { text: '🔗 My Referral Link',     callback_data: 'referral_link' },
       ],
       [
-        { text: '💸 Withdraw',           callback_data: 'withdraw' },
-        { text: '📊 Statistics',         callback_data: 'stats' },
-      ],
-      [
-        { text: 'ℹ️ Help',               callback_data: 'help' },
+        { text: '✅ Verify Requirements',  callback_data: 'verify' },
+        { text: '📊 Statistics',           callback_data: 'stats' },
       ],
     ],
   },
 });
 
 /**
- * Requirements keyboard — shown on /start and when verifying.
- * Each requirement has a URL button that opens the group/channel.
- * At the bottom: ✅ Check Requirements button.
- */
-const requirementsKeyboard = (requirements) => {
-  const rows = requirements.map((req) => {
-    let label;
-    if (req.type === 'TELEGRAM') {
-      // Distinguish community vs group by order
-      label = req.order_index === 1
-        ? '📢 Join Community'
-        : '👥 Join Group';
-    } else {
-      label = '▶️ Subscribe YouTube Channel';
-    }
-    return [{ text: label, url: req.url }];
-  });
-
-  // Check Requirements button below all join buttons
-  rows.push([{ text: '✅ Check Requirements', callback_data: 'check_requirements' }]);
-
-  return { reply_markup: { inline_keyboard: rows } };
-};
-
-/**
- * Back to main menu keyboard.
+ * Back to menu keyboard.
  */
 const backToMenuKeyboard = () => ({
   reply_markup: {
@@ -64,14 +73,27 @@ const backToMenuKeyboard = () => ({
 });
 
 /**
- * Build referral link from code.
+ * Verify page keyboard — same join buttons + check button + back.
  */
+const verifyKeyboard = (requirements) => {
+  const rows = requirements.map((req) => {
+    const label = req.type === 'TELEGRAM'
+      ? (req.order_index === 1 ? '📢 Join Community' : '👥 Join Group')
+      : '▶️ Subscribe YouTube Channel';
+    return [{ text: label, url: req.url }];
+  });
+  rows.push([{ text: '✅ Check Requirements', callback_data: 'check_requirements' }]);
+  rows.push([{ text: '🏠 Main Menu', callback_data: 'main_menu' }]);
+  return { reply_markup: { inline_keyboard: rows } };
+};
+
 const getReferralLink = (referralCode) =>
   `https://t.me/${botUsername}?start=${referralCode}`;
 
 module.exports = {
+  startKeyboard,
   mainMenuKeyboard,
-  requirementsKeyboard,
   backToMenuKeyboard,
+  verifyKeyboard,
   getReferralLink,
 };

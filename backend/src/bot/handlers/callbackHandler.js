@@ -1,16 +1,18 @@
 'use strict';
 
-const { User, Requirement } = require('../../models');
+const { User, Requirement, Referral } = require('../../models');
 const { getReferralStats } = require('../../services/referral/ReferralService');
 const { qualifyReferralIfEligible } = require('../../services/verification/VerificationService');
 const {
   mainMenuKeyboard,
-  requirementsKeyboard,
   backToMenuKeyboard,
+  verifyKeyboard,
   getReferralLink,
 } = require('../keyboards');
 const {
+  welcomeBack,
   balanceMessage,
+  myReferralsMessage,
   verificationResult,
   referrerRewardNotification,
   helpMessage,
@@ -22,7 +24,6 @@ const handleCallback = async (bot, callbackQuery) => {
   const chatId = message.chat.id;
 
   try {
-    // Acknowledge the button press (removes loading spinner)
     await bot.answerCallbackQuery(callbackQuery.id);
 
     const user = await User.findOne({ where: { telegram_id: from.id } });
@@ -35,22 +36,20 @@ const handleCallback = async (bot, callbackQuery) => {
 
     switch (data) {
 
-      // ── Main Menu ───────────────────────────────────────────────────────────
+      // ── Main Menu ─────────────────────────────────────────────────────────────
       case 'main_menu': {
-        const { welcomeBack } = require('../messages');
-        await bot.sendMessage(
-          chatId,
-          welcomeBack(user),
-          { parse_mode: 'HTML', ...mainMenuKeyboard() }
-        );
+        await user.reload();
+        await bot.sendMessage(chatId, welcomeBack(user), {
+          parse_mode: 'HTML',
+          ...mainMenuKeyboard(),
+        });
         break;
       }
 
-      // ── Balance ─────────────────────────────────────────────────────────────
+      // ── Balance ───────────────────────────────────────────────────────────────
       case 'balance': {
-        const stats = await getReferralStats(user.id);
-        // Reload user to get fresh balance
         await user.reload();
+        const stats = await getReferralStats(user.id);
         await bot.sendMessage(chatId, balanceMessage(user, stats), {
           parse_mode: 'HTML',
           ...backToMenuKeyboard(),
@@ -58,30 +57,39 @@ const handleCallback = async (bot, callbackQuery) => {
         break;
       }
 
-      // ── Referral Link ────────────────────────────────────────────────────────
-      case 'referral_link': {
-        const link = getReferralLink(user.referral_code);
-        await bot.sendMessage(chatId,
-          `👥 <b>Refer &amp; Earn Program</b>\n\n` +
-          `🚀 Invite friends and earn limitless crypto!\n\n` +
-          `🎁 You will receive <b>$0.75 USDT</b> for every valid user who joins through your link.\n\n` +
-          `🔗 <b>Your Exclusive Referral Link:</b>\n<code>${link}</code>\n\n` +
-          `📢 Share this link with your network and start earning!`,
-          { parse_mode: 'HTML', ...backToMenuKeyboard() }
-        );
+      // ── My Referrals ──────────────────────────────────────────────────────────
+      case 'my_referrals': {
+        await user.reload();
+        const stats = await getReferralStats(user.id);
+        const referralList = await Referral.findAll({
+          where: { referrer_id: user.id },
+          include: [{ model: User, as: 'referred_user', attributes: ['first_name', 'username'] }],
+          order: [['created_at', 'DESC']],
+          limit: 10,
+        });
+        await bot.sendMessage(chatId, myReferralsMessage(user, stats, referralList), {
+          parse_mode: 'HTML',
+          ...backToMenuKeyboard(),
+        });
         break;
       }
 
-      // ── My Referrals ─────────────────────────────────────────────────────────
-      case 'my_referrals': {
+      // ── My Referral Link ──────────────────────────────────────────────────────
+      case 'referral_link': {
+        const link = getReferralLink(user.referral_code);
         const stats = await getReferralStats(user.id);
         await bot.sendMessage(chatId,
-          `👥 <b>My Referrals</b>\n\n` +
-          `Total: <b>${stats.total}</b>\n` +
-          `✅ Rewarded: <b>${stats.rewarded}</b>\n` +
-          `🎯 Qualified: <b>${stats.qualified}</b>\n` +
-          `⏳ Pending: <b>${stats.pending}</b>\n\n` +
-          `💰 Total Earned: <b>$${parseFloat(user.total_earned).toFixed(2)}</b>`,
+          `🔗 <b>Your Referral Link</b>\n\n` +
+          `<code>${link}</code>\n\n` +
+          `👆 Tap link above to copy it!\n\n` +
+          `━━━━━━━━━━━━━━━━━━━\n` +
+          `📢 <b>Refer &amp; Earn Program</b>\n\n` +
+          `💰 Earn <b>$0.75 USDT</b> for every friend who:\n` +
+          `✅ Joins both Telegram channels\n` +
+          `✅ Subscribes to YouTube\n\n` +
+          `👥 Your referrals so far: <b>${stats.total}</b>\n` +
+          `✅ Successful: <b>${stats.rewarded}</b>\n` +
+          `💵 Earned: <b>$${parseFloat(user.total_earned).toFixed(2)}</b>`,
           { parse_mode: 'HTML', ...backToMenuKeyboard() }
         );
         break;
@@ -94,60 +102,65 @@ const handleCallback = async (bot, callbackQuery) => {
           order: [['order_index', 'ASC']],
         });
         await bot.sendMessage(chatId,
-          `📋 <b>Complete all 3 requirements to qualify:</b>\n\n` +
-          `👇 Click each button to join, then press <b>✅ Check Requirements</b>`,
-          { parse_mode: 'HTML', ...requirementsKeyboard(requirements) }
+          `📋 <b>Requirements</b>\n\n` +
+          `Complete all 3 steps to earn your $0.75 reward:\n\n` +
+          `1️⃣ Join Telegram Community\n` +
+          `2️⃣ Join Telegram Group\n` +
+          `3️⃣ Subscribe YouTube Channel\n\n` +
+          `👇 Click each button then press <b>✅ Check Requirements</b>`,
+          { parse_mode: 'HTML', ...verifyKeyboard(requirements) }
         );
         break;
       }
 
-      // ── Check Requirements ───────────────────────────────────────────────────
+      // ── Check Requirements ────────────────────────────────────────────────────
       case 'check_requirements': {
-        await bot.sendMessage(chatId, '⏳ Checking your requirements...');
+        const checking = await bot.sendMessage(chatId, '⏳ Verifying your memberships...');
 
         const { results, rewarded, referral } = await qualifyReferralIfEligible(user);
+        await user.reload();
 
+        const allDone = results.every((r) => r.verified);
         const resultText = verificationResult(results);
 
-        // If not all verified — show join buttons again below the result
-        const allDone = results.every((r) => r.verified);
         if (allDone) {
+          // All done — show main menu
           await bot.sendMessage(chatId, resultText, {
             parse_mode: 'HTML',
             ...mainMenuKeyboard(),
           });
         } else {
+          // Not done — show join buttons again
           const requirements = await Requirement.findAll({
             where: { is_enabled: true },
             order: [['order_index', 'ASC']],
           });
           await bot.sendMessage(chatId, resultText, {
             parse_mode: 'HTML',
-            ...requirementsKeyboard(requirements),
+            ...verifyKeyboard(requirements),
           });
         }
 
-        // Notify referrer if they just got rewarded
+        // Auto-notify referrer — no admin needed
         if (rewarded && referral) {
-          const referrer = await User.findByPk(referral.referrer_id);
-          if (referrer) {
-            await referrer.reload();
-            try {
+          try {
+            const referrer = await User.findByPk(referral.referrer_id);
+            if (referrer) {
+              await referrer.reload();
               await bot.sendMessage(
                 referrer.telegram_id,
                 referrerRewardNotification(user, referrer.balance),
                 { parse_mode: 'HTML' }
               );
-            } catch (e) {
-              // User may have blocked the bot — not fatal
-              logger.warn('Could not notify referrer', { referrer_id: referrer.id });
             }
+          } catch (e) {
+            logger.warn('Could not notify referrer', { error: e.message });
           }
         }
         break;
       }
 
-      // ── Withdraw ─────────────────────────────────────────────────────────────
+      // ── Withdraw ──────────────────────────────────────────────────────────────
       case 'withdraw': {
         await user.reload();
         const balance = parseFloat(user.balance);
@@ -158,43 +171,47 @@ const handleCallback = async (bot, callbackQuery) => {
             `❌ <b>Insufficient Balance</b>\n\n` +
             `Minimum withdrawal: <b>$${minWithdrawal.toFixed(2)}</b>\n` +
             `Your balance: <b>$${balance.toFixed(2)}</b>\n\n` +
-            `Keep sharing your referral link to earn more! 🚀`,
+            `You need <b>$${(minWithdrawal - balance).toFixed(2)}</b> more.\n` +
+            `Keep sharing to earn more! 🚀`,
             { parse_mode: 'HTML', ...backToMenuKeyboard() }
           );
         } else {
           await bot.sendMessage(chatId,
             `💸 <b>Withdrawal Request</b>\n\n` +
-            `Your available balance: <b>$${balance.toFixed(2)}</b>\n\n` +
-            `To request a withdrawal, please contact admin or use /withdraw command with your payment details.\n\n` +
-            `Minimum withdrawal: <b>$${minWithdrawal.toFixed(2)}</b>`,
+            `Available balance: <b>$${balance.toFixed(2)}</b>\n\n` +
+            `To withdraw, send this command with your payment details:\n` +
+            `/withdraw [payment_method] [account_details]\n\n` +
+            `Example:\n` +
+            `/withdraw USDT TRC20 TYourWalletAddressHere\n\n` +
+            `Minimum: <b>$${minWithdrawal.toFixed(2)}</b>`,
             { parse_mode: 'HTML', ...backToMenuKeyboard() }
           );
         }
         break;
       }
 
-      // ── Statistics ───────────────────────────────────────────────────────────
+      // ── Statistics ────────────────────────────────────────────────────────────
       case 'stats': {
-        const stats = await getReferralStats(user.id);
         await user.reload();
+        const stats = await getReferralStats(user.id);
         await bot.sendMessage(chatId,
-          `📊 <b>Your Statistics</b>\n\n` +
-          `👤 Member since: <b>${new Date(user.created_at).toLocaleDateString()}</b>\n` +
-          `🔑 Referral code: <code>${user.referral_code}</code>\n\n` +
-          `👥 Total referrals: <b>${stats.total}</b>\n` +
+          `📊 <b>Statistics</b>\n\n` +
+          `👤 Joined: <b>${new Date(user.created_at).toLocaleDateString()}</b>\n` +
+          `🔑 Code: <code>${user.referral_code}</code>\n\n` +
+          `👥 Total Referrals: <b>${stats.total}</b>\n` +
           `✅ Rewarded: <b>${stats.rewarded}</b>\n` +
           `⏳ Pending: <b>${stats.pending}</b>\n\n` +
-          `💰 Balance: <b>$${parseFloat(user.balance).toFixed(2)}</b>\n` +
+          `💵 Balance: <b>$${parseFloat(user.balance).toFixed(2)}</b>\n` +
           `📈 Total Earned: <b>$${parseFloat(user.total_earned).toFixed(2)}</b>\n` +
-          `💸 Total Withdrawn: <b>$${parseFloat(user.total_withdrawn).toFixed(2)}</b>`,
+          `💸 Withdrawn: <b>$${parseFloat(user.total_withdrawn).toFixed(2)}</b>`,
           { parse_mode: 'HTML', ...backToMenuKeyboard() }
         );
         break;
       }
 
-      // ── Help ─────────────────────────────────────────────────────────────────
+      // ── Help ──────────────────────────────────────────────────────────────────
       case 'help': {
-        await bot.sendMessage(chatId, helpMessage(), {
+        await bot.sendMessage(chatId, helpMessage(user), {
           parse_mode: 'HTML',
           ...backToMenuKeyboard(),
         });
@@ -202,12 +219,12 @@ const handleCallback = async (bot, callbackQuery) => {
       }
 
       default:
-        logger.warn('Unknown callback data', { data, user_id: user.id });
+        logger.warn('Unknown callback', { data });
     }
   } catch (err) {
-    logger.error('Callback handler error', { data, error: err.message, stack: err.stack });
+    logger.error('Callback error', { data, error: err.message });
     try {
-      await bot.sendMessage(chatId, '❌ Something went wrong. Please try again.');
+      await bot.sendMessage(chatId, '❌ An error occurred. Please try again.');
     } catch (e) { /* ignore */ }
   }
 };
