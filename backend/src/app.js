@@ -32,6 +32,7 @@ app.use(
         process.env.NETLIFY_URL,
         'http://localhost:5173',
         'http://localhost:3000',
+        'https://telegram-referral-platform-five.vercel.app',
       ].filter(Boolean));
 
       // Also allow any *.netlify.app subdomain (preview deploys)
