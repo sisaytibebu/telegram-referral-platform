@@ -8,9 +8,9 @@ const app = require('./app');
 const env = require('./config/env');
 const logger = require('./utils/logger');
 const { testConnection } = require('./config/database');
+const { initBot } = require('./bot/index');
 
 const startServer = async () => {
-  // Test DB connection on startup (non-fatal in dev so we can work without MySQL)
   const dbOk = await testConnection();
   if (!dbOk) {
     if (env.isProduction()) {
@@ -19,6 +19,13 @@ const startServer = async () => {
     } else {
       logger.warn('Database not connected — server starting anyway (development mode).');
     }
+  }
+
+  // Start Telegram bot
+  if (env.TELEGRAM_BOT_TOKEN) {
+    initBot();
+  } else {
+    logger.warn('TELEGRAM_BOT_TOKEN not set — bot not started');
   }
 
   const server = app.listen(env.PORT, () => {

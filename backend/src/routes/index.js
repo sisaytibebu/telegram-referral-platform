@@ -9,6 +9,7 @@ const healthRouter = require('./health');
 const router = Router();
 
 router.use('/health', healthRouter);
+router.use('/telegram', require('./telegram'));
 
 // Future routes will be mounted here in subsequent phases:
 // router.use('/users',      require('./users'));

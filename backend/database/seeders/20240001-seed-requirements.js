@@ -17,9 +17,9 @@ module.exports = {
       {
         name: 'Join Telegram Community 1',
         type: 'TELEGRAM',
-        telegram_chat_id: 'REPLACE_WITH_CHAT_ID_1',  // Update via admin dashboard
+        telegram_chat_id: '-1004418005232',
         url: 'https://t.me/+gq4chv77usE1OWZk',
-        description: 'Join our first Telegram community to qualify',
+        description: 'Join CRYPTO COMMUNITY to qualify',
         is_enabled: true,
         order_index: 1,
         created_at: new Date(),
@@ -28,9 +28,9 @@ module.exports = {
       {
         name: 'Join Telegram Community 2',
         type: 'TELEGRAM',
-        telegram_chat_id: 'REPLACE_WITH_CHAT_ID_2',  // Update via admin dashboard
+        telegram_chat_id: '-1003920921797',
         url: 'https://t.me/+cvl2ct83eeRiNTI0',
-        description: 'Join our second Telegram community to qualify',
+        description: 'Join CRYPTO GIVE AWAY to qualify',
         is_enabled: true,
         order_index: 2,
         created_at: new Date(),

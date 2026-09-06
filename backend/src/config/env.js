@@ -30,8 +30,10 @@ module.exports = {
 
   // Telegram
   TELEGRAM_BOT_TOKEN: optional('TELEGRAM_BOT_TOKEN'),
-  TELEGRAM_BOT_USERNAME: optional('TELEGRAM_BOT_USERNAME', 'YourBot'),
+  TELEGRAM_BOT_USERNAME: optional('TELEGRAM_BOT_USERNAME', 'cryptogive_awayBOT'),
   TELEGRAM_WEBHOOK_SECRET: optional('TELEGRAM_WEBHOOK_SECRET'),
+  TELEGRAM_CHAT_ID_1: optional('TELEGRAM_CHAT_ID_1'),   // Numeric ID of group 1
+  TELEGRAM_CHAT_ID_2: optional('TELEGRAM_CHAT_ID_2'),   // Numeric ID of group 2
 
   // JWT
   JWT_SECRET: optional('JWT_SECRET', 'change-me-in-production'),
