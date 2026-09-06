@@ -35,5 +35,6 @@ router.put('/requirements/:id',               c.updateRequirement);
 router.delete('/requirements/:id',            c.deleteRequirement);
 
 router.get('/audit-logs',                     c.getAuditLogs);
+router.post('/youtube/approve',               c.approveYouTubeVerificationHandler);
 
 module.exports = router;

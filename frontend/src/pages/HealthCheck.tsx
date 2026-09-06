@@ -70,8 +70,7 @@ export default function HealthCheck() {
                 <strong>Connection failed</strong>
                 <p>{errorMsg}</p>
                 <p className={styles.hint}>
-                  Make sure the backend is running on{' '}
-                  <code>http://localhost:5000</code>
+                  Check that the Railway backend is running and CORS is configured correctly.
                 </p>
               </div>
             ) : (

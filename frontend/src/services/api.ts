@@ -4,9 +4,14 @@
  */
 import axios from 'axios';
 
-// In production (Netlify) VITE_API_URL = https://your-app.up.railway.app/api
+// In production (Vercel) VITE_API_URL is set as env var in Vercel dashboard.
+// Fallback to hardcoded Railway URL if env var is missing at build time.
 // In development the Vite proxy handles /api → localhost:5000
-const BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD
+    ? 'https://telegram-referral-platform-production.up.railway.app/api'
+    : '/api');
 
 const api = axios.create({
   baseURL: BASE_URL,

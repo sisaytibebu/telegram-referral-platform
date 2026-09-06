@@ -69,7 +69,8 @@ const handleCallback = async (bot, callbackQuery) => {
           order: [['order_index', 'ASC']],
         });
         await bot.sendMessage(chatId,
-          '📋 <b>Complete all requirements to qualify for referral rewards:</b>',
+          '📋 <b>Complete all requirements to qualify for referral rewards:</b>\n\n' +
+          '<i>For YouTube: click Open, subscribe, then use the button below to confirm.</i>',
           { parse_mode: 'HTML', ...requirementsKeyboard(requirements) }
         );
         break;

@@ -293,6 +293,24 @@ const deleteRequirement = async (req, res, next) => {
 
 // ── Audit Logs ────────────────────────────────────────────────────────────────
 
+// POST /api/admin/youtube/approve
+const approveYouTubeVerificationHandler = async (req, res, next) => {
+  try {
+    const { user_id, requirement_id } = req.body;
+    if (!user_id || !requirement_id) return apiError(res, 'user_id and requirement_id required', 400);
+    const { approveYouTubeVerification } = require('../services/verification/VerificationService');
+    const record = await approveYouTubeVerification(user_id, requirement_id);
+    await AuditLog.create({
+      admin_id:    req.admin.id,
+      action:      'YOUTUBE_VERIFICATION_APPROVED',
+      entity_type: 'requirement_verification',
+      entity_id:   record.id,
+      ip_address:  req.ip,
+    });
+    return success(res, record, 'YouTube verification approved');
+  } catch (err) { next(err); }
+};
+
 // GET /api/admin/audit-logs
 const getAuditLogs = async (req, res, next) => {
   try {
@@ -317,4 +335,5 @@ module.exports = {
   getSettings, updateSettings,
   getAdminRequirements, createRequirement, updateRequirement, deleteRequirement,
   getAuditLogs,
+  approveYouTubeVerificationHandler,
 };
