@@ -7,10 +7,10 @@
     "start": "node src/scripts/migrate.js && node src/server.js",
     "start:server": "node src/server.js",
     "migrate": "node src/scripts/migrate.js",
-    "dev": "nodemon src/server.js",
-    "migrate": "npx sequelize-cli db:migrate",
+    "migrate:cli": "npx sequelize-cli db:migrate",
     "migrate:undo": "npx sequelize-cli db:migrate:undo",
     "seed": "npx sequelize-cli db:seed:all",
+    "dev": "nodemon src/server.js",
     "test": "jest --runInBand --forceExit",
     "test:coverage": "jest --coverage --runInBand --forceExit",
     "lint": "eslint src --ext .js"

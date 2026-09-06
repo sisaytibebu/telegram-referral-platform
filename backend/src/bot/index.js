@@ -78,6 +78,22 @@ const initBot = () => {
     bot.sendMessage(msg.chat.id, helpMessage(), { parse_mode: 'HTML', ...backToMenuKeyboard() });
   });
 
+  // ── /stats (admin summary via bot) ────────────────────────────────────────────
+  bot.onText(/\/stats/, async (msg) => {
+    const user = await User.findOne({ where: { telegram_id: msg.from.id } });
+    if (!user) return bot.sendMessage(msg.chat.id, '❌ Please /start first.');
+    const stats = await getReferralStats(user.id);
+    bot.sendMessage(msg.chat.id,
+      `📊 <b>Your Statistics</b>\n\n` +
+      `👥 Total referrals: <b>${stats.total}</b>\n` +
+      `✅ Rewarded: <b>${stats.rewarded}</b>\n` +
+      `⏳ Pending: <b>${stats.pending}</b>\n\n` +
+      `💰 Balance: <b>$${parseFloat(user.balance).toFixed(2)}</b>\n` +
+      `📈 Total Earned: <b>$${parseFloat(user.total_earned).toFixed(2)}</b>`,
+      { parse_mode: 'HTML', ...backToMenuKeyboard() }
+    );
+  });
+
   // ── Callback queries ──────────────────────────────────────────────────────────
   bot.on('callback_query', async (callbackQuery) => {
     await handleCallback(bot, callbackQuery);

@@ -247,15 +247,32 @@ This starts:
 | Phase | Description                          | Status      |
 |-------|--------------------------------------|-------------|
 | 1     | Project structure, health endpoint   | ✅ Complete  |
-| 2     | Database schema & migrations         | ⏳ Pending   |
-| 3     | Telegram bot registration            | ⏳ Pending   |
-| 4     | Referral links & attribution         | ⏳ Pending   |
-| 5     | Telegram membership verification     | ⏳ Pending   |
-| 6     | Verification/qualification engine    | ⏳ Pending   |
-| 7     | Wallet ledger & $0.75 rewards        | ⏳ Pending   |
-| 8     | $10 withdrawals & admin approval     | ⏳ Pending   |
-| 9     | React admin dashboard                | ⏳ Pending   |
-| 10    | YouTube verification                 | ⏳ Pending   |
-| 11    | Anti-fraud protections               | ⏳ Pending   |
-| 12    | Automated tests                      | ⏳ Pending   |
-| 13    | Docker & production deployment       | ⏳ Pending   |
+| 2     | Database schema & migrations         | ✅ Complete  |
+| 3     | Telegram bot registration            | ✅ Complete  |
+| 4     | Referral links & attribution         | ✅ Complete  |
+| 5     | Telegram membership verification     | ✅ Complete  |
+| 6     | Verification/qualification engine    | ✅ Complete  |
+| 7     | Wallet ledger & $0.75 rewards        | ✅ Complete  |
+| 8     | $10 withdrawals & admin approval     | ✅ Complete  |
+| 9     | React admin dashboard                | ✅ Complete  |
+| 10    | YouTube verification                 | ✅ Complete  |
+| 11    | Anti-fraud protections               | ✅ Complete  |
+| 12    | Automated tests                      | ✅ Complete  |
+| 13    | Docker & production deployment       | ✅ Complete  |
+
+## Live URLs
+
+| Service | URL |
+|---------|-----|
+| Frontend (Vercel) | https://telegram-referral-platform-five.vercel.app |
+| Backend API (Railway) | https://telegram-referral-platform-production.up.railway.app |
+| Health Check | https://telegram-referral-platform-production.up.railway.app/api/health |
+| Telegram Bot | https://t.me/cryptogive_awayBOT |
+| Admin Dashboard | https://telegram-referral-platform-five.vercel.app/login |
+
+## Admin Credentials (Change Immediately)
+
+```
+Username: admin
+Password: Admin@1234
+```
