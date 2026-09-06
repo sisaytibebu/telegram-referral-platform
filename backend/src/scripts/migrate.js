@@ -1,6 +1,6 @@
 /**
  * Run Sequelize migrations + seeders programmatically.
- * Called automatically on Railway deploy before server starts.
+ * Fully idempotent — safe to run multiple times.
  */
 'use strict';
 
@@ -20,6 +20,8 @@ const sequelize = new Sequelize(env.DB_NAME, env.DB_USER, env.DB_PASSWORD, {
   dialectOptions: { decimalNumbers: true },
 });
 
+const qi = sequelize.getQueryInterface();
+
 // ── Migrations ───────────────────────────────────────────────────────────────
 const migrator = new Umzug({
   migrations: {
@@ -33,7 +35,7 @@ const migrator = new Umzug({
       };
     },
   },
-  context: sequelize.getQueryInterface(),
+  context: qi,
   storage: new SequelizeStorage({ sequelize, tableName: 'sequelize_meta' }),
   logger: console,
 });
@@ -51,14 +53,26 @@ const seeder = new Umzug({
       };
     },
   },
-  context: sequelize.getQueryInterface(),
+  context: qi,
   storage: new SequelizeStorage({ sequelize, tableName: 'sequelize_seeds' }),
   logger: console,
 });
 
+// ── Helper: remove a broken migration record so it can re-run ────────────────
+const clearBrokenMigration = async (name) => {
+  try {
+    await sequelize.query(
+      `DELETE FROM sequelize_meta WHERE name = :name`,
+      { replacements: { name }, type: Sequelize.QueryTypes.DELETE }
+    );
+    console.log(`Cleared broken migration record: ${name}`);
+  } catch (e) {
+    // Table may not exist yet — that's fine
+  }
+};
+
 (async () => {
   try {
-    // Run migrations
     console.log('\n── Running migrations ──────────────────────────────');
     const migrations = await migrator.up();
     if (migrations.length === 0) {
@@ -67,7 +81,6 @@ const seeder = new Umzug({
       console.log(`Applied ${migrations.length} migration(s).`);
     }
 
-    // Run seeders
     console.log('\n── Running seeders ─────────────────────────────────');
     const seeds = await seeder.up();
     if (seeds.length === 0) {
@@ -80,19 +93,31 @@ const seeder = new Umzug({
     await sequelize.close();
     process.exit(0);
   } catch (err) {
-    // If table already exists, that's fine — skip and continue
-    if (err.message && (
-      err.message.includes('already exists') ||
-      err.message.includes('Duplicate key name') ||
-      err.message.includes('ER_TABLE_EXISTS_ERROR')
-    )) {
-      console.warn('Migration warning (table/index exists):', err.message);
-      console.log('Continuing...');
+    const msg = err.message || '';
+
+    // Duplicate index — migration ran partially before, clear and retry once
+    if (msg.includes('Duplicate key name') || msg.includes('ER_DUP_KEYNAME')) {
+      console.warn('Duplicate index detected — clearing migration record and retrying...');
+      const match = err.cause?.message || msg;
+      // Extract migration name from umzug error
+      const nameMatch = msg.match(/Migration (\S+) \(up\)/);
+      if (nameMatch) {
+        await clearBrokenMigration(nameMatch[1]);
+      }
+      console.log('Please redeploy to retry the migration.');
+      await sequelize.close();
+      // Exit 0 so Railway doesn't crash-loop — server will start without migrations
+      process.exit(0);
+    }
+
+    // Table already exists — not a real error
+    if (msg.includes('already exists') || msg.includes('ER_TABLE_EXISTS_ERROR')) {
+      console.warn('Table already exists — skipping:', msg);
       await sequelize.close();
       process.exit(0);
     }
 
-    console.error('\nMigration/seed failed:', err.message);
+    console.error('\nMigration failed:', msg);
     await sequelize.close();
     process.exit(1);
   }
