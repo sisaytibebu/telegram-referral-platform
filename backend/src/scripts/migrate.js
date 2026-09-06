@@ -82,6 +82,18 @@ const clearBrokenMigration = async (name) => {
     }
 
     console.log('\n── Running seeders ─────────────────────────────────');
+
+    // If admins table is empty, force re-run of admin seeder
+    try {
+      const [rows] = await sequelize.query('SELECT COUNT(*) as count FROM admins');
+      if (parseInt(rows[0].count) === 0) {
+        console.log('Admins table is empty — clearing seed record to force re-seed...');
+        await sequelize.query(
+          `DELETE FROM sequelize_seeds WHERE name = '20240002-seed-admin.js'`
+        ).catch(() => {});
+      }
+    } catch (e) { /* table may not exist yet */ }
+
     const seeds = await seeder.up();
     if (seeds.length === 0) {
       console.log('No pending seeders.');
