@@ -62,22 +62,26 @@ const checkAllRequirements = async (user) => {
       method = 'BUTTON_CLICK';
     }
 
-    // Upsert verification record
+    // Upsert verification record — but NEVER overwrite a click record for YouTube
     const [record, created] = await RequirementVerification.findOrCreate({
       where: { user_id: user.id, requirement_id: req.id },
       defaults: { status: 'PENDING', verification_data: null },
     });
 
-    // Update status based on current check result
     if (verified && record.status !== 'VERIFIED') {
+      // Mark as verified
       await record.update({
-        status:      'VERIFIED',
-        verified_at: new Date(),
+        status:            'VERIFIED',
+        verified_at:       new Date(),
         verification_data: JSON.stringify({ method }),
       });
-    } else if (!verified && record.status === 'PENDING') {
-      await record.update({ status: 'FAILED' });
+    } else if (!verified && req.type === 'TELEGRAM') {
+      // Only update TELEGRAM failures — never overwrite YouTube click records
+      if (record.status === 'PENDING' || record.status === 'FAILED') {
+        await record.update({ status: 'FAILED' });
+      }
     }
+    // For YouTube: if not verified and record exists, leave it as-is (preserve click record)
 
     results.push({ requirement: req, verified, method });
   }
