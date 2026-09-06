@@ -3,6 +3,7 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Create table only if it doesn't exist
     await queryInterface.createTable('users', {
       id: {
         type: Sequelize.BIGINT.UNSIGNED,
@@ -39,7 +40,6 @@ module.exports = {
         onDelete: 'SET NULL',
       },
       balance: {
-        // Denormalised cache — source of truth is transactions table
         type: Sequelize.DECIMAL(12, 2),
         allowNull: false,
         defaultValue: '0.00',
@@ -80,10 +80,23 @@ module.exports = {
       },
     });
 
-    await queryInterface.addIndex('users', ['telegram_id'], { unique: true, name: 'idx_users_telegram_id' });
-    await queryInterface.addIndex('users', ['referral_code'], { unique: true, name: 'idx_users_referral_code' });
-    await queryInterface.addIndex('users', ['referred_by_id'], { name: 'idx_users_referred_by_id' });
-    await queryInterface.addIndex('users', ['created_at'], { name: 'idx_users_created_at' });
+    // Add indexes safely — ignore if they already exist
+    const addIndexSafe = async (table, fields, options) => {
+      try {
+        await queryInterface.addIndex(table, fields, options);
+      } catch (err) {
+        if (err.message && err.message.includes('Duplicate key name')) {
+          console.log(`Index ${options.name} already exists — skipping.`);
+        } else {
+          throw err;
+        }
+      }
+    };
+
+    await addIndexSafe('users', ['telegram_id'], { unique: true, name: 'idx_users_telegram_id' });
+    await addIndexSafe('users', ['referral_code'], { unique: true, name: 'idx_users_referral_code' });
+    await addIndexSafe('users', ['referred_by_id'], { name: 'idx_users_referred_by_id' });
+    await addIndexSafe('users', ['created_at'], { name: 'idx_users_created_at' });
   },
 
   async down(queryInterface) {

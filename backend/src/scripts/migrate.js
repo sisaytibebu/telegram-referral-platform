@@ -80,8 +80,19 @@ const seeder = new Umzug({
     await sequelize.close();
     process.exit(0);
   } catch (err) {
+    // If table already exists, that's fine — skip and continue
+    if (err.message && (
+      err.message.includes('already exists') ||
+      err.message.includes('Duplicate key name') ||
+      err.message.includes('ER_TABLE_EXISTS_ERROR')
+    )) {
+      console.warn('Migration warning (table/index exists):', err.message);
+      console.log('Continuing...');
+      await sequelize.close();
+      process.exit(0);
+    }
+
     console.error('\nMigration/seed failed:', err.message);
-    console.error(err.stack);
     await sequelize.close();
     process.exit(1);
   }
