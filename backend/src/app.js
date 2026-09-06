@@ -33,12 +33,14 @@ app.use(
         'http://localhost:5173',
         'http://localhost:3000',
         'https://telegram-referral-platform-five.vercel.app',
+        'https://telegram-1qsrb0d7q-sisay-tibebus-projects.vercel.app',
       ].filter(Boolean));
 
-      // Also allow any *.netlify.app subdomain (preview deploys)
+      // Allow ALL *.vercel.app and *.netlify.app subdomains (covers all preview deploys)
+      const isVercel = /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
       const isNetlifyPreview = /^https:\/\/[a-z0-9-]+\.netlify\.app$/.test(origin);
 
-      if (allowed.has(origin) || isNetlifyPreview) return callback(null, true);
+      if (allowed.has(origin) || isVercel || isNetlifyPreview) return callback(null, true);
       logger.warn('CORS blocked request', { origin });
       return callback(new Error('Not allowed by CORS'));
     },
