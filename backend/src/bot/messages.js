@@ -57,13 +57,13 @@ const myReferralsMessage = (user, stats, referralList) => {
     `⏳ Pending: <b>${stats.pending}</b>\n\n` +
     `💰 Total Earned: <b>$${parseFloat(user.total_earned).toFixed(2)}</b>` +
     listText +
-    `\n\n` +
-    `━━━━━━━━━━━━━━━━━━━\n` +
-    `🔗 <b>Your Referral Link:</b>\n` +
-    `<code>${link}</code>\n\n` +
-    `📢 <b>Refer &amp; Earn Program</b>\n` +
-    `Invite friends and earn <b>$0.75 USDT</b> for each one who completes all requirements!\n\n` +
-    `👆 Tap the link above to copy it, then share with your friends!`
+    `\n\n━━━━━━━━━━━━━━━━━━━\n\n` +
+    `👥 <b>Refer &amp; Earn Program</b>\n\n` +
+    `🚀 Invite your friends and earn limitless crypto!\n\n` +
+    `🎁 You will receive <b>$0.75 USDT</b> for every valid user who joins through your link.\n\n` +
+    `🔗 <b>Your Exclusive Referral Link:</b>\n` +
+    `${link}\n\n` +
+    `📢 Share this link with your network and start earning!`
   );
 };
 
