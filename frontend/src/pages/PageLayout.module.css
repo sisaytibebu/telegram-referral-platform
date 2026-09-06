@@ -1,0 +1,14 @@
+.page { padding: 1.5rem; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem; }
+.title { color: #e6edf3; font-size: 1.4rem; font-weight: 700; margin: 0; }
+.search { background: #161b22; border: 1px solid #30363d; color: #c9d1d9; padding: 0.5rem 0.875rem; border-radius: 6px; font-size: 0.875rem; outline: none; width: 240px; }
+.search:focus { border-color: #58a6ff; }
+.tableCard { background: #161b22; border: 1px solid #30363d; border-radius: 10px; overflow: hidden; }
+.filterRow { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.filterBtn { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 0.4rem 0.85rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+.filterBtn.active, .filterBtn:hover { background: #30363d; color: #c9d1d9; }
+.actionBtn { padding: 0.3rem 0.65rem; border-radius: 5px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; margin-right: 0.25rem; }
+.approveBtn { background: #16a34a22; color: #3fb950; border: 1px solid #3fb95044; }
+.approveBtn:hover { background: #16a34a44; }
+.rejectBtn { background: #dc262622; color: #f85149; border: 1px solid #f8514944; }
+.rejectBtn:hover { background: #dc262644; }

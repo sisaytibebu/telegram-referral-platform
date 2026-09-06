@@ -1,0 +1,16 @@
+.formCard { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.25rem; }
+.formTitle { color: #e6edf3; font-size: 1rem; font-weight: 600; margin: 0 0 1rem; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.field { display: flex; flex-direction: column; gap: 0.35rem; }
+.field label { color: #8b949e; font-size: 0.8rem; font-weight: 600; }
+.field input, .field select, .field textarea {
+  background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+  padding: 0.55rem 0.75rem; border-radius: 6px; font-size: 0.875rem; outline: none;
+}
+.field input:focus, .field select:focus { border-color: #58a6ff; }
+.actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+.primaryBtn { background: #238636; color: #fff; border: none; padding: 0.55rem 1.25rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+.primaryBtn:hover { background: #2ea043; }
+.cancelBtn { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 0.55rem 1.25rem; border-radius: 6px; font-size: 0.875rem; cursor: pointer; }
+.cancelBtn:hover { background: #30363d; }
+.dangerBtn { background: #b91c1c; color: #fff; border: none; padding: 0.55rem 1.25rem; border-radius: 6px; font-size: 0.875rem; cursor: pointer; }

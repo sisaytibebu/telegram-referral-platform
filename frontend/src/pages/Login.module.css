@@ -1,0 +1,12 @@
+.page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0d1117; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 2.5rem; width: 360px; text-align: center; }
+.logo { font-size: 3rem; margin-bottom: 0.5rem; }
+.title { color: #e6edf3; font-size: 1.3rem; font-weight: 700; margin: 0; }
+.subtitle { color: #8b949e; font-size: 0.875rem; margin: 0.25rem 0 1.5rem; }
+.form { display: flex; flex-direction: column; gap: 0.75rem; }
+.input { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 0.65rem 0.875rem; border-radius: 6px; font-size: 0.9rem; outline: none; }
+.input:focus { border-color: #58a6ff; }
+.btn { background: #238636; color: #fff; border: none; padding: 0.7rem; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-top: 0.25rem; }
+.btn:hover:not(:disabled) { background: #2ea043; }
+.btn:disabled { opacity: 0.6; cursor: default; }
+.error { background: #ff000022; border: 1px solid #f85149; color: #f85149; padding: 0.5rem; border-radius: 6px; font-size: 0.85rem; }

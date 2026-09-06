@@ -1,0 +1,4 @@
+.page { padding: 1.5rem; }
+.title { color: #e6edf3; font-size: 1.4rem; font-weight: 700; margin: 0 0 1.25rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+.loading { padding: 2rem; color: #8b949e; text-align: center; }

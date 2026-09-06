@@ -1,0 +1,6 @@
+.wrapper { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.875rem; color: #c9d1d9; }
+.table th { background: #161b22; color: #8b949e; padding: 0.75rem 1rem; text-align: left; font-weight: 600; border-bottom: 1px solid #30363d; white-space: nowrap; }
+.table td { padding: 0.7rem 1rem; border-bottom: 1px solid #21262d; vertical-align: middle; }
+.table tr:hover td { background: #161b22; }
+.loading, .empty { padding: 2rem; text-align: center; color: #8b949e; font-size: 0.9rem; }
