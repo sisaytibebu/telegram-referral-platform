@@ -192,8 +192,50 @@ const handleCallback = async (bot, callbackQuery) => {
         break;
       }
 
-      default:
-        logger.warn('Unknown callback', { data });
+      default: {
+        // Handle YouTube click: yt_click_<requirementId>
+        if (data && data.startsWith('yt_click_')) {
+          const reqId = parseInt(data.replace('yt_click_', ''));
+          const env = require('../../config/env');
+
+          // Find the YouTube requirement URL
+          let ytUrl = `https://www.youtube.com/channel/${env.YOUTUBE_CHANNEL_ID}`;
+          try {
+            const { Requirement, RequirementVerification } = require('../../models');
+            const req = await Requirement.findByPk(reqId);
+            if (req && req.url) ytUrl = req.url;
+
+            // Record that user clicked — mark as PENDING (not yet verified, but clicked)
+            await RequirementVerification.upsert({
+              user_id:           user.id,
+              requirement_id:    reqId,
+              status:            'PENDING',
+              verification_data: JSON.stringify({ clicked_at: new Date(), method: 'BUTTON_CLICK' }),
+            });
+          } catch (e) {
+            logger.warn('Could not record YouTube click', { error: e.message });
+          }
+
+          // Send redirect message with URL button
+          await bot.sendMessage(chatId,
+            `▶️ <b>Subscribe to our YouTube Channel</b>\n\n` +
+            `Click the button below to open YouTube and subscribe.\n\n` +
+            `Once subscribed, come back and press <b>✅ Check Requirements</b>`,
+            {
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '▶️ Open YouTube Channel', url: ytUrl }],
+                  [{ text: '✅ Check Requirements', callback_data: 'check_requirements' }],
+                  [{ text: '🔙 Back', callback_data: 'verify' }],
+                ],
+              },
+            }
+          );
+        } else {
+          logger.warn('Unknown callback', { data });
+        }
+      }
     }
   } catch (err) {
     logger.error('Callback error', { data, error: err.message });

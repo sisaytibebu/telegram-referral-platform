@@ -73,9 +73,9 @@ const verificationResult = (results) => {
     const icon = r.verified ? '✅' : '❌';
     let label;
     if (r.requirement.type === 'TELEGRAM') {
-      label = r.requirement.order_index === 1 ? 'Telegram Community' : 'Telegram Group';
+      label = r.requirement.order_index === 1 ? 'Joined Telegram Community' : 'Joined Telegram Group';
     } else {
-      label = 'YouTube Channel';
+      label = r.verified ? 'Subscribed YouTube Channel' : 'YouTube Channel (click ▶️ button first)';
     }
     return `${icon} ${label}`;
   });

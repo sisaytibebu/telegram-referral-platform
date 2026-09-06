@@ -4,29 +4,25 @@ const env = require('../config/env');
 const botUsername = env.TELEGRAM_BOT_USERNAME || 'cryptogive_awayBOT';
 
 /**
- * Start/Welcome keyboard:
- * - Join buttons (one per requirement)
- * - Main Menu button
- * - Help button
+ * Requirements keyboard — shown on /start and when verifying.
+ * - Telegram groups: URL buttons (direct redirect)
+ * - YouTube: callback button (records click, then redirects via answer)
+ * - Check Requirements button at bottom
  */
 const startKeyboard = (requirements) => {
   const rows = [];
 
-  // Join buttons for each requirement
   requirements.forEach((req) => {
-    let label;
     if (req.type === 'TELEGRAM') {
-      label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
+      const label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
+      rows.push([{ text: label, url: req.url }]);
     } else {
-      label = '▶️ Subscribe YouTube Channel';
+      // YouTube — callback so we can record the click
+      rows.push([{ text: '▶️ Subscribe YouTube Channel', callback_data: `yt_click_${req.id}` }]);
     }
-    rows.push([{ text: label, url: req.url }]);
   });
 
-  // Check Requirements button
   rows.push([{ text: '✅ Check Requirements', callback_data: 'check_requirements' }]);
-
-  // Main Menu and Help
   rows.push([
     { text: '🏠 Main Menu', callback_data: 'main_menu' },
     { text: 'ℹ️ Help',      callback_data: 'help' },
@@ -73,15 +69,20 @@ const backToMenuKeyboard = () => ({
 });
 
 /**
- * Verify page keyboard — same join buttons + check button + back.
+ * Verify page keyboard — same as startKeyboard.
  */
 const verifyKeyboard = (requirements) => {
-  const rows = requirements.map((req) => {
-    const label = req.type === 'TELEGRAM'
-      ? (req.order_index === 1 ? '📢 Join Community' : '👥 Join Group')
-      : '▶️ Subscribe YouTube Channel';
-    return [{ text: label, url: req.url }];
+  const rows = [];
+
+  requirements.forEach((req) => {
+    if (req.type === 'TELEGRAM') {
+      const label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
+      rows.push([{ text: label, url: req.url }]);
+    } else {
+      rows.push([{ text: '▶️ Subscribe YouTube Channel', callback_data: `yt_click_${req.id}` }]);
+    }
   });
+
   rows.push([{ text: '✅ Check Requirements', callback_data: 'check_requirements' }]);
   rows.push([{ text: '🏠 Main Menu', callback_data: 'main_menu' }]);
   return { reply_markup: { inline_keyboard: rows } };
