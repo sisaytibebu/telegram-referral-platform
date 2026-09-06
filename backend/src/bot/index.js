@@ -39,7 +39,11 @@ const initBot = () => {
     if (!user) return bot.sendMessage(msg.chat.id, '❌ Please /start first.');
     const link = getReferralLink(user.referral_code);
     bot.sendMessage(msg.chat.id,
-      `🔗 <b>Your Referral Link</b>\n\n<code>${link}</code>\n\nEarn <b>$0.75</b> per verified referral!`,
+      `👥 <b>Refer &amp; Earn Program</b>\n\n` +
+      `🚀 Invite your friends and earn limitless crypto!\n\n` +
+      `🎁 You will receive <b>$0.75 USDT</b> for every valid user who joins through your link.\n\n` +
+      `🔗 <b>Your Exclusive Referral Link:</b>\n<code>${link}</code>\n\n` +
+      `📢 Share this link with your network and start earning!`,
       { parse_mode: 'HTML', ...backToMenuKeyboard() }
     );
   });

@@ -13,22 +13,24 @@ const handleStart = async (bot, msg, referralCode = null) => {
     const { user, isNew } = await findOrCreateUser(from, referralCode);
 
     if (user.is_banned) {
-      return bot.sendMessage(chat.id, '🚫 Your account has been suspended.');
+      return bot.sendMessage(chat.id, '🚫 Your account has been suspended. Contact support.');
     }
 
-    if (isNew) {
-      // Show requirements for new users
-      const requirements = await Requirement.findAll({
-        where: { is_enabled: true },
-        order: [['order_index', 'ASC']],
-      });
+    // Load active requirements for the join buttons
+    const requirements = await Requirement.findAll({
+      where: { is_enabled: true },
+      order: [['order_index', 'ASC']],
+    });
 
+    if (isNew) {
+      // New user — show welcome + join buttons
       await bot.sendMessage(
         chat.id,
         welcomeNew(user, requirements),
         { parse_mode: 'HTML', ...requirementsKeyboard(requirements) }
       );
     } else {
+      // Returning user — show main menu but also show requirements if not completed
       await bot.sendMessage(
         chat.id,
         welcomeBack(user),
