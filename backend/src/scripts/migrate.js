@@ -85,11 +85,22 @@ const clearBrokenMigration = async (name) => {
 
     // If admins table is empty, force re-run of admin seeder
     try {
-      const [rows] = await sequelize.query('SELECT COUNT(*) as count FROM admins');
-      if (parseInt(rows[0].count) === 0) {
+      const [adminRows] = await sequelize.query('SELECT COUNT(*) as count FROM admins');
+      if (parseInt(adminRows[0].count) === 0) {
         console.log('Admins table is empty — clearing seed record to force re-seed...');
         await sequelize.query(
           `DELETE FROM sequelize_seeds WHERE name = '20240002-seed-admin.js'`
+        ).catch(() => {});
+      }
+    } catch (e) { /* table may not exist yet */ }
+
+    // If requirements table is empty, force re-run of requirements seeder
+    try {
+      const [reqRows] = await sequelize.query('SELECT COUNT(*) as count FROM requirements');
+      if (parseInt(reqRows[0].count) === 0) {
+        console.log('Requirements table is empty — clearing seed record to force re-seed...');
+        await sequelize.query(
+          `DELETE FROM sequelize_seeds WHERE name = '20240001-seed-requirements.js'`
         ).catch(() => {});
       }
     } catch (e) { /* table may not exist yet */ }

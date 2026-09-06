@@ -16,10 +16,25 @@ const logger = require('../../utils/logger');
  * Returns array of { requirement, verified, method } objects.
  */
 const checkAllRequirements = async (user) => {
-  const requirements = await Requirement.findAll({
-    where: { is_enabled: true },
-    order: [['order_index', 'ASC']],
-  });
+  let requirements;
+  try {
+    requirements = await Requirement.findAll({
+      where: { is_enabled: true },
+      order: [['order_index', 'ASC']],
+    });
+  } catch (e) {
+    requirements = [];
+  }
+
+  // If DB has no requirements, use env-based fallback
+  if (!requirements || requirements.length === 0) {
+    const env = require('../../config/env');
+    requirements = [
+      { id: 1, name: 'Join Telegram Community', type: 'TELEGRAM', telegram_chat_id: env.TELEGRAM_CHAT_ID_1, is_enabled: true, order_index: 1 },
+      { id: 2, name: 'Join Telegram Group',      type: 'TELEGRAM', telegram_chat_id: env.TELEGRAM_CHAT_ID_2, is_enabled: true, order_index: 2 },
+      { id: 3, name: 'Subscribe YouTube Channel', type: 'YOUTUBE', telegram_chat_id: null, is_enabled: true, order_index: 3 },
+    ];
+  }
 
   const results = [];
 

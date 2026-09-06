@@ -1,8 +1,9 @@
 'use strict';
 
-const { User, Requirement, Referral } = require('../../models');
+const { User, Referral } = require('../../models');
 const { getReferralStats } = require('../../services/referral/ReferralService');
 const { qualifyReferralIfEligible } = require('../../services/verification/VerificationService');
+const { getRequirements } = require('./startHandler');
 const {
   mainMenuKeyboard,
   backToMenuKeyboard,
@@ -36,28 +37,23 @@ const handleCallback = async (bot, callbackQuery) => {
 
     switch (data) {
 
-      // ── Main Menu ─────────────────────────────────────────────────────────────
       case 'main_menu': {
         await user.reload();
         await bot.sendMessage(chatId, welcomeBack(user), {
-          parse_mode: 'HTML',
-          ...mainMenuKeyboard(),
+          parse_mode: 'HTML', ...mainMenuKeyboard(),
         });
         break;
       }
 
-      // ── Balance ───────────────────────────────────────────────────────────────
       case 'balance': {
         await user.reload();
         const stats = await getReferralStats(user.id);
         await bot.sendMessage(chatId, balanceMessage(user, stats), {
-          parse_mode: 'HTML',
-          ...backToMenuKeyboard(),
+          parse_mode: 'HTML', ...backToMenuKeyboard(),
         });
         break;
       }
 
-      // ── My Referrals ──────────────────────────────────────────────────────────
       case 'my_referrals': {
         await user.reload();
         const stats = await getReferralStats(user.id);
@@ -68,39 +64,32 @@ const handleCallback = async (bot, callbackQuery) => {
           limit: 10,
         });
         await bot.sendMessage(chatId, myReferralsMessage(user, stats, referralList), {
-          parse_mode: 'HTML',
-          ...backToMenuKeyboard(),
+          parse_mode: 'HTML', ...backToMenuKeyboard(),
         });
         break;
       }
 
-      // ── My Referral Link ──────────────────────────────────────────────────────
       case 'referral_link': {
         const link = getReferralLink(user.referral_code);
         const stats = await getReferralStats(user.id);
         await bot.sendMessage(chatId,
           `🔗 <b>Your Referral Link</b>\n\n` +
           `<code>${link}</code>\n\n` +
-          `👆 Tap link above to copy it!\n\n` +
+          `👆 Tap to copy!\n\n` +
           `━━━━━━━━━━━━━━━━━━━\n` +
           `📢 <b>Refer &amp; Earn Program</b>\n\n` +
           `💰 Earn <b>$0.75 USDT</b> for every friend who:\n` +
           `✅ Joins both Telegram channels\n` +
           `✅ Subscribes to YouTube\n\n` +
-          `👥 Your referrals so far: <b>${stats.total}</b>\n` +
-          `✅ Successful: <b>${stats.rewarded}</b>\n` +
+          `👥 Referrals: <b>${stats.total}</b> | ✅ Rewarded: <b>${stats.rewarded}</b>\n` +
           `💵 Earned: <b>$${parseFloat(user.total_earned).toFixed(2)}</b>`,
           { parse_mode: 'HTML', ...backToMenuKeyboard() }
         );
         break;
       }
 
-      // ── Verify — show join buttons ────────────────────────────────────────────
       case 'verify': {
-        const requirements = await Requirement.findAll({
-          where: { is_enabled: true },
-          order: [['order_index', 'ASC']],
-        });
+        const reqs = await getRequirements();
         await bot.sendMessage(chatId,
           `📋 <b>Requirements</b>\n\n` +
           `Complete all 3 steps to earn your $0.75 reward:\n\n` +
@@ -108,14 +97,13 @@ const handleCallback = async (bot, callbackQuery) => {
           `2️⃣ Join Telegram Group\n` +
           `3️⃣ Subscribe YouTube Channel\n\n` +
           `👇 Click each button then press <b>✅ Check Requirements</b>`,
-          { parse_mode: 'HTML', ...verifyKeyboard(requirements) }
+          { parse_mode: 'HTML', ...verifyKeyboard(reqs) }
         );
         break;
       }
 
-      // ── Check Requirements ────────────────────────────────────────────────────
       case 'check_requirements': {
-        const checking = await bot.sendMessage(chatId, '⏳ Verifying your memberships...');
+        await bot.sendMessage(chatId, '⏳ Verifying your memberships...');
 
         const { results, rewarded, referral } = await qualifyReferralIfEligible(user);
         await user.reload();
@@ -124,20 +112,13 @@ const handleCallback = async (bot, callbackQuery) => {
         const resultText = verificationResult(results);
 
         if (allDone) {
-          // All done — show main menu
           await bot.sendMessage(chatId, resultText, {
-            parse_mode: 'HTML',
-            ...mainMenuKeyboard(),
+            parse_mode: 'HTML', ...mainMenuKeyboard(),
           });
         } else {
-          // Not done — show join buttons again
-          const requirements = await Requirement.findAll({
-            where: { is_enabled: true },
-            order: [['order_index', 'ASC']],
-          });
+          const reqs = await getRequirements();
           await bot.sendMessage(chatId, resultText, {
-            parse_mode: 'HTML',
-            ...verifyKeyboard(requirements),
+            parse_mode: 'HTML', ...verifyKeyboard(reqs),
           });
         }
 
@@ -160,7 +141,6 @@ const handleCallback = async (bot, callbackQuery) => {
         break;
       }
 
-      // ── Withdraw ──────────────────────────────────────────────────────────────
       case 'withdraw': {
         await user.reload();
         const balance = parseFloat(user.balance);
@@ -172,17 +152,15 @@ const handleCallback = async (bot, callbackQuery) => {
             `Minimum withdrawal: <b>$${minWithdrawal.toFixed(2)}</b>\n` +
             `Your balance: <b>$${balance.toFixed(2)}</b>\n\n` +
             `You need <b>$${(minWithdrawal - balance).toFixed(2)}</b> more.\n` +
-            `Keep sharing to earn more! 🚀`,
+            `Keep sharing your referral link to earn more! 🚀`,
             { parse_mode: 'HTML', ...backToMenuKeyboard() }
           );
         } else {
           await bot.sendMessage(chatId,
             `💸 <b>Withdrawal Request</b>\n\n` +
             `Available balance: <b>$${balance.toFixed(2)}</b>\n\n` +
-            `To withdraw, send this command with your payment details:\n` +
-            `/withdraw [payment_method] [account_details]\n\n` +
-            `Example:\n` +
-            `/withdraw USDT TRC20 TYourWalletAddressHere\n\n` +
+            `Please use the /withdraw command:\n` +
+            `/withdraw USDT TYourWalletAddress\n\n` +
             `Minimum: <b>$${minWithdrawal.toFixed(2)}</b>`,
             { parse_mode: 'HTML', ...backToMenuKeyboard() }
           );
@@ -190,7 +168,6 @@ const handleCallback = async (bot, callbackQuery) => {
         break;
       }
 
-      // ── Statistics ────────────────────────────────────────────────────────────
       case 'stats': {
         await user.reload();
         const stats = await getReferralStats(user.id);
@@ -209,11 +186,9 @@ const handleCallback = async (bot, callbackQuery) => {
         break;
       }
 
-      // ── Help ──────────────────────────────────────────────────────────────────
       case 'help': {
         await bot.sendMessage(chatId, helpMessage(user), {
-          parse_mode: 'HTML',
-          ...backToMenuKeyboard(),
+          parse_mode: 'HTML', ...backToMenuKeyboard(),
         });
         break;
       }
