@@ -25,6 +25,37 @@ const handleCallback = async (bot, callbackQuery) => {
   const chatId = message.chat.id;
 
   try {
+    // ── YouTube click — handle BEFORE answerCallbackQuery ──────────────────────
+    // answerCallbackQuery with url opens a URL in the browser
+    if (data && data.startsWith('yt_click_')) {
+      const reqId = parseInt(data.replace('yt_click_', ''));
+      const envConfig = require('../../config/env');
+      let ytUrl = `https://www.youtube.com/channel/${envConfig.YOUTUBE_CHANNEL_ID}`;
+
+      try {
+        const { Requirement, RequirementVerification } = require('../../models');
+        const ytUser = await User.findOne({ where: { telegram_id: from.id } });
+        const req = await Requirement.findByPk(reqId);
+        if (req && req.url) ytUrl = req.url;
+
+        if (ytUser) {
+          await RequirementVerification.upsert({
+            user_id:           ytUser.id,
+            requirement_id:    reqId,
+            status:            'PENDING',
+            verification_data: JSON.stringify({ clicked_at: new Date(), method: 'BUTTON_CLICK' }),
+          });
+        }
+      } catch (e) {
+        logger.warn('Could not record YouTube click', { error: e.message });
+      }
+
+      // Open YouTube in browser — answerCallbackQuery with url does this
+      await bot.answerCallbackQuery(callbackQuery.id, { url: ytUrl });
+      return; // Done — no further processing needed
+    }
+
+    // ── All other callbacks ───────────────────────────────────────────────────
     await bot.answerCallbackQuery(callbackQuery.id);
 
     const user = await User.findOne({ where: { telegram_id: from.id } });
@@ -193,36 +224,7 @@ const handleCallback = async (bot, callbackQuery) => {
       }
 
       default: {
-        // Handle YouTube click: yt_click_<requirementId>
-        if (data && data.startsWith('yt_click_')) {
-          const reqId = parseInt(data.replace('yt_click_', ''));
-          const envConfig = require('../../config/env');
-
-          // Find the YouTube requirement URL
-          let ytUrl = `https://www.youtube.com/channel/${envConfig.YOUTUBE_CHANNEL_ID}`;
-          try {
-            const { Requirement, RequirementVerification } = require('../../models');
-            const req = await Requirement.findByPk(reqId);
-            if (req && req.url) ytUrl = req.url;
-
-            // Record that user clicked the YouTube button
-            await RequirementVerification.upsert({
-              user_id:           user.id,
-              requirement_id:    reqId,
-              status:            'PENDING',
-              verification_data: JSON.stringify({ clicked_at: new Date(), method: 'BUTTON_CLICK' }),
-            });
-          } catch (e) {
-            logger.warn('Could not record YouTube click', { error: e.message });
-          }
-
-          // Just open YouTube directly — no extra message, no extra buttons
-          await bot.answerCallbackQuery(callbackQuery.id, {
-            url: ytUrl,
-          });
-        } else {
-          logger.warn('Unknown callback', { data });
-        }
+        logger.warn('Unknown callback', { data });
       }
     }
   } catch (err) {
