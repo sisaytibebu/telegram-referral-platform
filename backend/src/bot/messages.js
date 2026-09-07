@@ -75,7 +75,7 @@ const verificationResult = (results) => {
     if (r.requirement.type === 'TELEGRAM') {
       label = r.requirement.order_index === 1 ? 'Joined Telegram Community' : 'Joined Telegram Group';
     } else {
-      label = r.verified ? 'Subscribed YouTube Channel' : 'YouTube Channel (click ▶️ button first)';
+      label = r.verified ? 'Subscribed YouTube Channel' : 'YouTube Channel';
     }
     return `${icon} ${label}`;
   });

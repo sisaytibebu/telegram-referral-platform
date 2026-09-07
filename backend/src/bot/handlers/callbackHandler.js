@@ -142,7 +142,7 @@ const handleCallback = async (bot, callbackQuery) => {
           `Complete all 3 steps to earn your $0.75 reward:\n\n` +
           `1️⃣ Join Telegram Community\n` +
           `2️⃣ Join Telegram Group\n` +
-          `3️⃣ Subscribe YouTube Channel — then press <b>✅ I Subscribed to YouTube</b>\n\n` +
+          `3️⃣ Subscribe YouTube Channel\n\n` +
           `👇 Click each button below, then press <b>✅ Check Requirements</b>`,
           { parse_mode: 'HTML', ...verifyKeyboard(reqs) }
         );
