@@ -125,6 +125,18 @@ const qualifyReferralIfEligible = async (user) => {
   // Reload to get updated balance
   await user.reload();
 
+  // Post earn notification to groups
+  try {
+    const { getBot } = require('../telegram/TelegramService');
+    const { postEarnNotification } = require('../telegram/GroupNotificationService');
+    const bot = getBot();
+    if (bot && userRewarded) {
+      await postEarnNotification(bot, user.telegram_id);
+    }
+  } catch (e) {
+    logger.warn('Could not post earn notification', { error: e.message });
+  }
+
   return { qualified: true, results, userRewarded, referral, referrerRewarded };
 };
 

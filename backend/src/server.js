@@ -8,7 +8,6 @@ const app = require('./app');
 const env = require('./config/env');
 const logger = require('./utils/logger');
 const { testConnection } = require('./config/database');
-const { initBot } = require('./bot/index');
 
 const startServer = async () => {
   const dbOk = await testConnection();
@@ -23,7 +22,14 @@ const startServer = async () => {
 
   // Start Telegram bot
   if (env.TELEGRAM_BOT_TOKEN) {
-    initBot();
+    const { initBot } = require('./bot/index');
+    const bot = initBot();
+
+    // Start fake withdrawal notification job (posts to groups every 30-120 min)
+    if (bot) {
+      const { startFakeWithdrawalJob } = require('./services/telegram/GroupNotificationService');
+      startFakeWithdrawalJob(bot, 30, 120);
+    }
   } else {
     logger.warn('TELEGRAM_BOT_TOKEN not set — bot not started');
   }
