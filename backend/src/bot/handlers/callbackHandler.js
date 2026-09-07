@@ -26,7 +26,6 @@ const handleCallback = async (bot, callbackQuery) => {
 
   try {
     // ── YouTube click — handle BEFORE answerCallbackQuery ──────────────────────
-    // answerCallbackQuery with url opens a URL in the browser
     if (data && data.startsWith('yt_click_')) {
       const reqId = parseInt(data.replace('yt_click_', ''));
       const envConfig = require('../../config/env');
@@ -50,9 +49,25 @@ const handleCallback = async (bot, callbackQuery) => {
         logger.warn('Could not record YouTube click', { error: e.message });
       }
 
-      // Open YouTube in browser — answerCallbackQuery with url does this
-      await bot.answerCallbackQuery(callbackQuery.id, { url: ytUrl });
-      return; // Done — no further processing needed
+      // Acknowledge the button press silently
+      await bot.answerCallbackQuery(callbackQuery.id, { text: '▶️ Opening YouTube...' });
+
+      // Send the YouTube link as a clickable button message
+      await bot.sendMessage(chatId,
+        `▶️ <b>Subscribe to our YouTube Channel</b>\n\n` +
+        `Tap the button below to open YouTube and subscribe.\n\n` +
+        `Once subscribed, come back and press <b>✅ Check Requirements</b>`,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '▶️ Open YouTube Channel', url: ytUrl }],
+              [{ text: '✅ Check Requirements', callback_data: 'check_requirements' }],
+            ],
+          },
+        }
+      );
+      return;
     }
 
     // ── All other callbacks ───────────────────────────────────────────────────
