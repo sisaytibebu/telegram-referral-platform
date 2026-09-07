@@ -3,11 +3,12 @@
 const env = require('../config/env');
 const botUsername = env.TELEGRAM_BOT_USERNAME || 'cryptogive_awayBOT';
 
+const getYtUrl = (req) =>
+  (req && req.url) ? req.url : `https://www.youtube.com/channel/${env.YOUTUBE_CHANNEL_ID}`;
+
 /**
- * Requirements keyboard — shown on /start and when verifying.
- * - Telegram groups: URL buttons (direct redirect)
- * - YouTube: callback button (records click, then redirects via answer)
- * - Check Requirements button at bottom
+ * Start keyboard — shown on /start for new users.
+ * YouTube button is a direct URL button — one click, opens YouTube.
  */
 const startKeyboard = (requirements) => {
   const rows = [];
@@ -17,8 +18,8 @@ const startKeyboard = (requirements) => {
       const label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
       rows.push([{ text: label, url: req.url }]);
     } else {
-      // YouTube — callback so we can record the click
-      rows.push([{ text: '▶️ Subscribe YouTube Channel', callback_data: `yt_click_${req.id}` }]);
+      // Single URL button — opens YouTube directly on click
+      rows.push([{ text: '▶️ Subscribe YouTube Channel', url: getYtUrl(req) }]);
     }
   });
 
@@ -32,28 +33,22 @@ const startKeyboard = (requirements) => {
 };
 
 /**
- * Main Menu keyboard:
- * - Balance
- * - My Referrals
- * - Withdraw
- * - My Referral Link
- * - Verify Requirements
- * - Statistics
+ * Main Menu keyboard.
  */
 const mainMenuKeyboard = () => ({
   reply_markup: {
     inline_keyboard: [
       [
-        { text: '💰 Balance',              callback_data: 'balance' },
-        { text: '👥 My Referrals',         callback_data: 'my_referrals' },
+        { text: '💰 Balance',             callback_data: 'balance' },
+        { text: '👥 My Referrals',        callback_data: 'my_referrals' },
       ],
       [
-        { text: '💸 Withdraw',             callback_data: 'withdraw' },
-        { text: '🔗 My Referral Link',     callback_data: 'referral_link' },
+        { text: '💸 Withdraw',            callback_data: 'withdraw' },
+        { text: '🔗 My Referral Link',    callback_data: 'referral_link' },
       ],
       [
-        { text: '✅ Verify Requirements',  callback_data: 'verify' },
-        { text: '📊 Statistics',           callback_data: 'stats' },
+        { text: '✅ Verify Requirements', callback_data: 'verify' },
+        { text: '📊 Statistics',          callback_data: 'stats' },
       ],
     ],
   },
@@ -79,7 +74,7 @@ const verifyKeyboard = (requirements) => {
       const label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
       rows.push([{ text: label, url: req.url }]);
     } else {
-      rows.push([{ text: '▶️ Subscribe YouTube Channel', callback_data: `yt_click_${req.id}` }]);
+      rows.push([{ text: '▶️ Subscribe YouTube Channel', url: getYtUrl(req) }]);
     }
   });
 

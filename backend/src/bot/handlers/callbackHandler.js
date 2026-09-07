@@ -25,52 +25,7 @@ const handleCallback = async (bot, callbackQuery) => {
   const chatId = message.chat.id;
 
   try {
-    // ── YouTube click — handle BEFORE answerCallbackQuery ──────────────────────
-    if (data && data.startsWith('yt_click_')) {
-      const reqId = parseInt(data.replace('yt_click_', ''));
-      const envConfig = require('../../config/env');
-      let ytUrl = `https://www.youtube.com/channel/${envConfig.YOUTUBE_CHANNEL_ID}`;
-
-      try {
-        const { Requirement, RequirementVerification } = require('../../models');
-        const ytUser = await User.findOne({ where: { telegram_id: from.id } });
-        const req = await Requirement.findByPk(reqId);
-        if (req && req.url) ytUrl = req.url;
-
-        if (ytUser) {
-          await RequirementVerification.upsert({
-            user_id:           ytUser.id,
-            requirement_id:    reqId,
-            status:            'PENDING',
-            verification_data: JSON.stringify({ clicked_at: new Date(), method: 'BUTTON_CLICK' }),
-          });
-        }
-      } catch (e) {
-        logger.warn('Could not record YouTube click', { error: e.message });
-      }
-
-      // Acknowledge the button press silently
-      await bot.answerCallbackQuery(callbackQuery.id, { text: '▶️ Opening YouTube...' });
-
-      // Send the YouTube link as a clickable button message
-      await bot.sendMessage(chatId,
-        `▶️ <b>Subscribe to our YouTube Channel</b>\n\n` +
-        `Tap the button below to open YouTube and subscribe.\n\n` +
-        `Once subscribed, come back and press <b>✅ Check Requirements</b>`,
-        {
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '▶️ Open YouTube Channel', url: ytUrl }],
-              [{ text: '✅ Check Requirements', callback_data: 'check_requirements' }],
-            ],
-          },
-        }
-      );
-      return;
-    }
-
-    // ── All other callbacks ───────────────────────────────────────────────────
+    // ── All callbacks ─────────────────────────────────────────────────────────
     await bot.answerCallbackQuery(callbackQuery.id);
 
     const user = await User.findOne({ where: { telegram_id: from.id } });

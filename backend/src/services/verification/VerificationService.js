@@ -41,16 +41,10 @@ const checkAllRequirements = async (user) => {
       verified = await checkMembership(req.telegram_chat_id, user.telegram_id);
       method = 'TELEGRAM_API';
     } else if (req.type === 'YOUTUBE') {
-      // Passes only if user clicked the YouTube button (PENDING or VERIFIED record exists)
-      try {
-        const clickRecord = await RequirementVerification.findOne({
-          where: { user_id: user.id, requirement_id: req.id },
-        });
-        verified = !!(clickRecord && ['PENDING', 'VERIFIED'].includes(clickRecord.status));
-      } catch (e) {
-        verified = false;
-      }
-      method = 'BUTTON_CLICK';
+      // YouTube is a direct URL button — auto-pass when user presses Check Requirements
+      // The button opens YouTube, we trust the user subscribed
+      verified = true;
+      method = 'AUTO_PASS';
     }
 
     // Update verification record — never overwrite YouTube click records
