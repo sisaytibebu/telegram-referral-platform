@@ -3,12 +3,11 @@
 const env = require('../config/env');
 const botUsername = env.TELEGRAM_BOT_USERNAME || 'cryptogive_awayBOT';
 
-const getYtUrl = (req) =>
-  (req && req.url) ? req.url : `https://www.youtube.com/channel/${env.YOUTUBE_CHANNEL_ID}`;
-
 /**
  * Start keyboard — shown on /start for new users.
- * YouTube button is a direct URL button — one click, opens YouTube.
+ * YouTube button is a CALLBACK button that:
+ *   1. Records the click in DB
+ *   2. Opens YouTube via answerCallbackQuery url
  */
 const startKeyboard = (requirements) => {
   const rows = [];
@@ -18,8 +17,8 @@ const startKeyboard = (requirements) => {
       const label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
       rows.push([{ text: label, url: req.url }]);
     } else {
-      // Single URL button — opens YouTube directly on click
-      rows.push([{ text: '▶️ Subscribe YouTube Channel', url: getYtUrl(req) }]);
+      // Callback button — records click AND opens YouTube
+      rows.push([{ text: '▶️ Subscribe YouTube Channel', callback_data: `yt_click_${req.id}` }]);
     }
   });
 
@@ -32,9 +31,6 @@ const startKeyboard = (requirements) => {
   return { reply_markup: { inline_keyboard: rows } };
 };
 
-/**
- * Main Menu keyboard.
- */
 const mainMenuKeyboard = () => ({
   reply_markup: {
     inline_keyboard: [
@@ -54,18 +50,12 @@ const mainMenuKeyboard = () => ({
   },
 });
 
-/**
- * Back to menu keyboard.
- */
 const backToMenuKeyboard = () => ({
   reply_markup: {
     inline_keyboard: [[{ text: '🏠 Main Menu', callback_data: 'main_menu' }]],
   },
 });
 
-/**
- * Verify page keyboard — same as startKeyboard.
- */
 const verifyKeyboard = (requirements) => {
   const rows = [];
 
@@ -74,7 +64,7 @@ const verifyKeyboard = (requirements) => {
       const label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
       rows.push([{ text: label, url: req.url }]);
     } else {
-      rows.push([{ text: '▶️ Subscribe YouTube Channel', url: getYtUrl(req) }]);
+      rows.push([{ text: '▶️ Subscribe YouTube Channel', callback_data: `yt_click_${req.id}` }]);
     }
   });
 

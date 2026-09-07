@@ -25,7 +25,48 @@ const handleCallback = async (bot, callbackQuery) => {
   const chatId = message.chat.id;
 
   try {
-    // ── All callbacks ─────────────────────────────────────────────────────────
+    // ── YouTube click ─────────────────────────────────────────────────────────
+    // Record click in DB, then open YouTube via answerCallbackQuery url
+    if (data && data.startsWith('yt_click_')) {
+      const reqId = parseInt(data.replace('yt_click_', ''));
+      const envConfig = require('../../config/env');
+      let ytUrl = `https://www.youtube.com/channel/${envConfig.YOUTUBE_CHANNEL_ID}`;
+
+      try {
+        const { Requirement, RequirementVerification } = require('../../models');
+        const req = await Requirement.findByPk(reqId);
+        if (req && req.url) ytUrl = req.url;
+
+        const ytUser = await User.findOne({ where: { telegram_id: from.id } });
+        if (ytUser) {
+          // Record the click — this is what makes YouTube pass on Check Requirements
+          await RequirementVerification.upsert({
+            user_id:           ytUser.id,
+            requirement_id:    reqId,
+            status:            'PENDING',
+            verification_data: JSON.stringify({ clicked_at: new Date(), method: 'BUTTON_CLICK' }),
+          });
+        }
+      } catch (e) {
+        logger.warn('Could not record YouTube click', { error: e.message });
+      }
+
+      // answerCallbackQuery with url opens YouTube directly in Telegram
+      try {
+        await bot.answerCallbackQuery(callbackQuery.id, { url: ytUrl });
+      } catch (e) {
+        // Some Telegram clients don't support url in answerCallbackQuery
+        // Fall back to sending a message with the link
+        await bot.answerCallbackQuery(callbackQuery.id, { text: 'Opening YouTube...' });
+        await bot.sendMessage(chatId,
+          `▶️ Open YouTube and subscribe:\n${ytUrl}\n\nThen press <b>✅ Check Requirements</b>`,
+          { parse_mode: 'HTML' }
+        );
+      }
+      return;
+    }
+
+    // ── All other callbacks ───────────────────────────────────────────────────
     await bot.answerCallbackQuery(callbackQuery.id);
 
     const user = await User.findOne({ where: { telegram_id: from.id } });
