@@ -51,18 +51,8 @@ const handleCallback = async (bot, callbackQuery) => {
         logger.warn('Could not record YouTube click', { error: e.message });
       }
 
-      // answerCallbackQuery with url opens YouTube directly in Telegram
-      try {
-        await bot.answerCallbackQuery(callbackQuery.id, { url: ytUrl });
-      } catch (e) {
-        // Some Telegram clients don't support url in answerCallbackQuery
-        // Fall back to sending a message with the link
-        await bot.answerCallbackQuery(callbackQuery.id, { text: 'Opening YouTube...' });
-        await bot.sendMessage(chatId,
-          `▶️ Open YouTube and subscribe:\n${ytUrl}\n\nThen press <b>✅ Check Requirements</b>`,
-          { parse_mode: 'HTML' }
-        );
-      }
+      // answerCallbackQuery with url opens YouTube directly — no message sent
+      await bot.answerCallbackQuery(callbackQuery.id, { url: ytUrl });
       return;
     }
 
