@@ -5,10 +5,14 @@ const env = require('../../config/env');
 const logger = require('../../utils/logger');
 
 /**
- * Credit a referral reward to the referrer.
+ * Credit a referral reward to a user.
  * Must be called inside an existing transaction.
+ * @param {number} userId
+ * @param {number|null} referralId - null for completion reward
+ * @param {object} t - Sequelize transaction
+ * @param {string} description - ledger description
  */
-const creditReferralReward = async (userId, referralId, t) => {
+const creditReferralReward = async (userId, referralId, t, description = 'Referral reward') => {
   const user = await User.findByPk(userId, { transaction: t, lock: true });
   if (!user) throw new Error(`User ${userId} not found`);
 
@@ -23,9 +27,9 @@ const creditReferralReward = async (userId, referralId, t) => {
     currency:       'USD',
     balance_before: balanceBefore.toFixed(2),
     balance_after:  balanceAfter.toFixed(2),
-    reference_type: 'referral',
-    reference_id:   referralId,
-    description:    'Referral reward',
+    reference_type: referralId ? 'referral' : 'completion',
+    reference_id:   referralId || null,
+    description,
     status:         'COMPLETED',
   }, { transaction: t });
 

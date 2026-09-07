@@ -104,7 +104,7 @@ const handleCallback = async (bot, callbackQuery) => {
       case 'check_requirements': {
         await bot.sendMessage(chatId, '⏳ Verifying your memberships...');
 
-        const { results, rewarded, referral } = await qualifyReferralIfEligible(user);
+        const { results, qualified, userRewarded, referral, referrerRewarded } = await qualifyReferralIfEligible(user);
         await user.reload();
 
         const allDone = results.every((r) => r.verified);
@@ -121,8 +121,8 @@ const handleCallback = async (bot, callbackQuery) => {
           });
         }
 
-        // Auto-notify referrer — no admin needed
-        if (rewarded && referral) {
+        // Notify referrer if they got rewarded
+        if (referrerRewarded && referral) {
           try {
             const referrer = await User.findByPk(referral.referrer_id);
             if (referrer) {
@@ -196,16 +196,16 @@ const handleCallback = async (bot, callbackQuery) => {
         // Handle YouTube click: yt_click_<requirementId>
         if (data && data.startsWith('yt_click_')) {
           const reqId = parseInt(data.replace('yt_click_', ''));
-          const env = require('../../config/env');
+          const envConfig = require('../../config/env');
 
           // Find the YouTube requirement URL
-          let ytUrl = `https://www.youtube.com/channel/${env.YOUTUBE_CHANNEL_ID}`;
+          let ytUrl = `https://www.youtube.com/channel/${envConfig.YOUTUBE_CHANNEL_ID}`;
           try {
             const { Requirement, RequirementVerification } = require('../../models');
             const req = await Requirement.findByPk(reqId);
             if (req && req.url) ytUrl = req.url;
 
-            // Record that user clicked — mark as PENDING (not yet verified, but clicked)
+            // Record that user clicked the YouTube button
             await RequirementVerification.upsert({
               user_id:           user.id,
               requirement_id:    reqId,
@@ -216,22 +216,10 @@ const handleCallback = async (bot, callbackQuery) => {
             logger.warn('Could not record YouTube click', { error: e.message });
           }
 
-          // Send redirect message with URL button
-          await bot.sendMessage(chatId,
-            `▶️ <b>Subscribe to our YouTube Channel</b>\n\n` +
-            `Click the button below to open YouTube and subscribe.\n\n` +
-            `Once subscribed, come back and press <b>✅ Check Requirements</b>`,
-            {
-              parse_mode: 'HTML',
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: '▶️ Open YouTube Channel', url: ytUrl }],
-                  [{ text: '✅ Check Requirements', callback_data: 'check_requirements' }],
-                  [{ text: '🔙 Back', callback_data: 'verify' }],
-                ],
-              },
-            }
-          );
+          // Just open YouTube directly — no extra message, no extra buttons
+          await bot.answerCallbackQuery(callbackQuery.id, {
+            url: ytUrl,
+          });
         } else {
           logger.warn('Unknown callback', { data });
         }

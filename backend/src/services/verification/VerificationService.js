@@ -2,18 +2,13 @@
 
 const { Requirement, RequirementVerification, Referral, sequelize } = require('../../models');
 const { checkMembership } = require('../telegram/TelegramService');
-const { verifySubscription } = require('../youtube/YouTubeService');
 const WalletService = require('../wallet/WalletService');
 const logger = require('../../utils/logger');
 
 /**
- * Check all requirements for a user and update verification records.
- *
- * Telegram requirements: verified in real-time via Bot API getChatMember.
- * YouTube requirements:  cannot be auto-verified via API — check if admin
- *                        has manually approved the user's self-report.
- *
- * Returns array of { requirement, verified, method } objects.
+ * Check all requirements for a user.
+ * - Telegram: real Bot API check
+ * - YouTube: passes only if user clicked the YouTube button
  */
 const checkAllRequirements = async (user) => {
   let requirements;
@@ -26,13 +21,13 @@ const checkAllRequirements = async (user) => {
     requirements = [];
   }
 
-  // If DB has no requirements, use env-based fallback
+  // Fallback if DB is empty
   if (!requirements || requirements.length === 0) {
     const env = require('../../config/env');
     requirements = [
-      { id: 1, name: 'Join Telegram Community', type: 'TELEGRAM', telegram_chat_id: env.TELEGRAM_CHAT_ID_1, is_enabled: true, order_index: 1 },
-      { id: 2, name: 'Join Telegram Group',      type: 'TELEGRAM', telegram_chat_id: env.TELEGRAM_CHAT_ID_2, is_enabled: true, order_index: 2 },
-      { id: 3, name: 'Subscribe YouTube Channel', type: 'YOUTUBE', telegram_chat_id: null, is_enabled: true, order_index: 3 },
+      { id: 1, name: 'Join Telegram Community',  type: 'TELEGRAM', telegram_chat_id: env.TELEGRAM_CHAT_ID_1, is_enabled: true, order_index: 1 },
+      { id: 2, name: 'Join Telegram Group',       type: 'TELEGRAM', telegram_chat_id: env.TELEGRAM_CHAT_ID_2, is_enabled: true, order_index: 2 },
+      { id: 3, name: 'Subscribe YouTube Channel', type: 'YOUTUBE',  telegram_chat_id: null,                   is_enabled: true, order_index: 3 },
     ];
   }
 
@@ -43,17 +38,13 @@ const checkAllRequirements = async (user) => {
     let method = 'unknown';
 
     if (req.type === 'TELEGRAM') {
-      // Real-time check via Telegram Bot API
       verified = await checkMembership(req.telegram_chat_id, user.telegram_id);
       method = 'TELEGRAM_API';
     } else if (req.type === 'YOUTUBE') {
-      // YouTube passes ONLY if user clicked the YouTube button
+      // Passes only if user clicked the YouTube button (PENDING or VERIFIED record exists)
       try {
         const clickRecord = await RequirementVerification.findOne({
-          where: {
-            user_id: user.id,
-            requirement_id: req.id,
-          },
+          where: { user_id: user.id, requirement_id: req.id },
         });
         verified = !!(clickRecord && ['PENDING', 'VERIFIED'].includes(clickRecord.status));
       } catch (e) {
@@ -62,26 +53,24 @@ const checkAllRequirements = async (user) => {
       method = 'BUTTON_CLICK';
     }
 
-    // Upsert verification record — but NEVER overwrite a click record for YouTube
-    const [record, created] = await RequirementVerification.findOrCreate({
+    // Update verification record — never overwrite YouTube click records
+    const [record] = await RequirementVerification.findOrCreate({
       where: { user_id: user.id, requirement_id: req.id },
       defaults: { status: 'PENDING', verification_data: null },
     });
 
     if (verified && record.status !== 'VERIFIED') {
-      // Mark as verified
       await record.update({
         status:            'VERIFIED',
         verified_at:       new Date(),
         verification_data: JSON.stringify({ method }),
       });
     } else if (!verified && req.type === 'TELEGRAM') {
-      // Only update TELEGRAM failures — never overwrite YouTube click records
-      if (record.status === 'PENDING' || record.status === 'FAILED') {
+      // Only mark Telegram as failed — never touch YouTube click records
+      if (['PENDING', 'FAILED'].includes(record.status)) {
         await record.update({ status: 'FAILED' });
       }
     }
-    // For YouTube: if not verified and record exists, leave it as-is (preserve click record)
 
     results.push({ requirement: req, verified, method });
   }
@@ -89,70 +78,64 @@ const checkAllRequirements = async (user) => {
   return results;
 };
 
-/**
- * Check if all enabled requirements are met.
- */
 const allRequirementsMet = (results) => results.every((r) => r.verified);
 
 /**
- * Submit a YouTube self-report for a user.
- * Creates/updates a PENDING verification — admin must approve to count.
- */
-const submitYouTubeSelfReport = async (userId, requirementId, youtubeChannelUrl) => {
-  const { verifySubscription: verify } = require('../youtube/YouTubeService');
-  const result = await verify(youtubeChannelUrl);
-
-  await RequirementVerification.upsert({
-    user_id:           userId,
-    requirement_id:    requirementId,
-    status:            'PENDING',  // Admin must approve
-    verification_data: JSON.stringify({ ...result.data, submitted_at: new Date() }),
-  });
-
-  return result;
-};
-
-/**
- * Admin approves a YouTube verification.
- */
-const approveYouTubeVerification = async (userId, requirementId) => {
-  const [record] = await RequirementVerification.findOrCreate({
-    where: { user_id: userId, requirement_id: requirementId },
-    defaults: { status: 'PENDING' },
-  });
-  await record.update({ status: 'VERIFIED', verified_at: new Date() });
-  return record;
-};
-
-/**
- * Qualify a referral and reward the referrer if all requirements are met.
+ * When user completes all requirements:
+ * 1. Credit $0.75 to the USER themselves (for completing)
+ * 2. Credit $0.75 to their REFERRER (if they were invited)
+ *
+ * Both rewards are idempotent — protected by DB constraints.
  */
 const qualifyReferralIfEligible = async (user) => {
   const results = await checkAllRequirements(user);
   if (!allRequirementsMet(results)) return { qualified: false, results };
 
-  // Find pending referral where this user is the referred user
-  const referral = await Referral.findOne({
-    where: { referred_user_id: user.id, status: 'PENDING' },
-  });
+  let userRewarded = false;
+  let referral = null;
+  let referrerRewarded = false;
 
-  if (!referral) return { qualified: true, results, rewarded: false };
-
-  // Qualify and reward atomically — double-reward protected by UNIQUE constraint
   await sequelize.transaction(async (t) => {
-    await referral.update({ status: 'QUALIFIED', qualified_at: new Date() }, { transaction: t });
-    await WalletService.creditReferralReward(referral.referrer_id, referral.id, t);
-    await referral.update({ status: 'REWARDED', rewarded_at: new Date() }, { transaction: t });
+    // Reload user inside transaction with lock
+    const freshUser = await user.constructor.findByPk(user.id, { transaction: t, lock: true });
+
+    // ── Reward 1: Credit $0.75 to the user themselves ──────────────────────────
+    // Only if they haven't already received their own completion reward
+    const alreadyGotOwnReward = await freshUser.constructor.sequelize.query(
+      `SELECT id FROM transactions WHERE user_id = :uid AND type = 'REFERRAL_REWARD' AND description = 'Completion reward' LIMIT 1`,
+      { replacements: { uid: user.id }, type: freshUser.constructor.sequelize.QueryTypes.SELECT, transaction: t }
+    );
+
+    if (alreadyGotOwnReward.length === 0) {
+      await WalletService.creditReferralReward(user.id, null, t, 'Completion reward');
+      userRewarded = true;
+      logger.info('Completion reward credited to user', { user_id: user.id });
+    }
+
+    // ── Reward 2: Credit $0.75 to referrer if user was invited ─────────────────
+    referral = await Referral.findOne({
+      where: { referred_user_id: user.id, status: 'PENDING' },
+      transaction: t,
+      lock: true,
+    });
+
+    if (referral) {
+      await referral.update({ status: 'QUALIFIED', qualified_at: new Date() }, { transaction: t });
+      await WalletService.creditReferralReward(referral.referrer_id, referral.id, t, 'Referral reward');
+      await referral.update({ status: 'REWARDED', rewarded_at: new Date() }, { transaction: t });
+      referrerRewarded = true;
+      logger.info('Referral reward credited to referrer', { referrer_id: referral.referrer_id });
+    }
   });
 
-  logger.info('Referral rewarded', { referral_id: referral.id, referrer_id: referral.referrer_id });
-  return { qualified: true, results, rewarded: true, referral };
+  // Reload to get updated balance
+  await user.reload();
+
+  return { qualified: true, results, userRewarded, referral, referrerRewarded };
 };
 
 module.exports = {
   checkAllRequirements,
   allRequirementsMet,
   qualifyReferralIfEligible,
-  submitYouTubeSelfReport,
-  approveYouTubeVerification,
 };

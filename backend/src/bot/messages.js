@@ -86,8 +86,8 @@ const verificationResult = (results) => {
     return (
       `✅ <b>All Requirements Complete!</b>\n\n` +
       `${lines.join('\n')}\n\n` +
-      `🎉 <b>$0.75 USDT</b> has been added to your balance!\n` +
-      `Keep sharing to earn more rewards! 🚀`
+      `🎉 <b>$0.75 USDT</b> has been added to your balance!\n\n` +
+      `Keep sharing your referral link to earn more! 🚀`
     );
   }
 
