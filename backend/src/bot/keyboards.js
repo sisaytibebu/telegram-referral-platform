@@ -4,30 +4,48 @@ const env = require('../config/env');
 const botUsername = env.TELEGRAM_BOT_USERNAME || 'cryptogive_awayBOT';
 
 /**
- * Start keyboard — shown on /start for new users.
- * YouTube button is a CALLBACK button that:
- *   1. Records the click in DB
- *   2. Opens YouTube via answerCallbackQuery url
+ * Start/Verify keyboard.
+ *
+ * YouTube flow:
+ *   Row 1: URL button → opens YouTube directly (no callback, no tracking)
+ *   Row 2: Callback button "✅ I Visited YouTube" → records click silently
+ *
+ * User MUST press "I Visited YouTube" for the requirement to pass.
+ * Pressing the URL button alone does NOT track anything (Telegram limitation).
  */
-const startKeyboard = (requirements) => {
+const buildRequirementRows = (requirements) => {
   const rows = [];
-
   requirements.forEach((req) => {
     if (req.type === 'TELEGRAM') {
       const label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
       rows.push([{ text: label, url: req.url }]);
     } else {
-      // Callback button — records click AND opens YouTube
-      rows.push([{ text: '▶️ Subscribe YouTube Channel', callback_data: `yt_click_${req.id}` }]);
+      const ytUrl = (req && req.url)
+        ? req.url
+        : `https://www.youtube.com/channel/${env.YOUTUBE_CHANNEL_ID}`;
+      // URL button: opens YouTube directly
+      rows.push([{ text: '▶️ Subscribe YouTube Channel', url: ytUrl }]);
+      // Confirm button: records the visit (user presses after subscribing)
+      rows.push([{ text: '✅ I Subscribed to YouTube ✅', callback_data: `yt_confirm_${req.id}` }]);
     }
   });
+  return rows;
+};
 
+const startKeyboard = (requirements) => {
+  const rows = buildRequirementRows(requirements);
   rows.push([{ text: '✅ Check Requirements', callback_data: 'check_requirements' }]);
   rows.push([
     { text: '🏠 Main Menu', callback_data: 'main_menu' },
     { text: 'ℹ️ Help',      callback_data: 'help' },
   ]);
+  return { reply_markup: { inline_keyboard: rows } };
+};
 
+const verifyKeyboard = (requirements) => {
+  const rows = buildRequirementRows(requirements);
+  rows.push([{ text: '✅ Check Requirements', callback_data: 'check_requirements' }]);
+  rows.push([{ text: '🏠 Main Menu', callback_data: 'main_menu' }]);
   return { reply_markup: { inline_keyboard: rows } };
 };
 
@@ -56,30 +74,13 @@ const backToMenuKeyboard = () => ({
   },
 });
 
-const verifyKeyboard = (requirements) => {
-  const rows = [];
-
-  requirements.forEach((req) => {
-    if (req.type === 'TELEGRAM') {
-      const label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
-      rows.push([{ text: label, url: req.url }]);
-    } else {
-      rows.push([{ text: '▶️ Subscribe YouTube Channel', callback_data: `yt_click_${req.id}` }]);
-    }
-  });
-
-  rows.push([{ text: '✅ Check Requirements', callback_data: 'check_requirements' }]);
-  rows.push([{ text: '🏠 Main Menu', callback_data: 'main_menu' }]);
-  return { reply_markup: { inline_keyboard: rows } };
-};
-
 const getReferralLink = (referralCode) =>
   `https://t.me/${botUsername}?start=${referralCode}`;
 
 module.exports = {
   startKeyboard,
+  verifyKeyboard,
   mainMenuKeyboard,
   backToMenuKeyboard,
-  verifyKeyboard,
   getReferralLink,
 };

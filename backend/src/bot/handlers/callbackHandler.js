@@ -25,34 +25,25 @@ const handleCallback = async (bot, callbackQuery) => {
   const chatId = message.chat.id;
 
   try {
-    // ── YouTube click ─────────────────────────────────────────────────────────
-    // Record click in DB, then open YouTube via answerCallbackQuery url
-    if (data && data.startsWith('yt_click_')) {
-      const reqId = parseInt(data.replace('yt_click_', ''));
-      const envConfig = require('../../config/env');
-      let ytUrl = `https://www.youtube.com/channel/${envConfig.YOUTUBE_CHANNEL_ID}`;
-
+    // ── YouTube subscription confirm ──────────────────────────────────────────
+    // User pressed "✅ I Subscribed to YouTube" — record silently, no new message
+    if (data && data.startsWith('yt_confirm_')) {
+      const reqId = parseInt(data.replace('yt_confirm_', ''));
       try {
-        const { Requirement, RequirementVerification } = require('../../models');
-        const req = await Requirement.findByPk(reqId);
-        if (req && req.url) ytUrl = req.url;
-
+        const { RequirementVerification } = require('../../models');
         const ytUser = await User.findOne({ where: { telegram_id: from.id } });
         if (ytUser) {
-          // Record the click — this is what makes YouTube pass on Check Requirements
           await RequirementVerification.upsert({
             user_id:           ytUser.id,
             requirement_id:    reqId,
             status:            'PENDING',
-            verification_data: JSON.stringify({ clicked_at: new Date(), method: 'BUTTON_CLICK' }),
+            verification_data: JSON.stringify({ confirmed_at: new Date(), method: 'USER_CONFIRM' }),
           });
         }
       } catch (e) {
-        logger.warn('Could not record YouTube click', { error: e.message });
+        logger.warn('Could not record YouTube confirmation', { error: e.message });
       }
-
-      // answerCallbackQuery with url opens YouTube directly — no message sent
-      await bot.answerCallbackQuery(callbackQuery.id, { url: ytUrl });
+      await bot.answerCallbackQuery(callbackQuery.id, { text: '✅ YouTube recorded! Now press Check Requirements.' });
       return;
     }
 
@@ -60,12 +51,8 @@ const handleCallback = async (bot, callbackQuery) => {
     await bot.answerCallbackQuery(callbackQuery.id);
 
     const user = await User.findOne({ where: { telegram_id: from.id } });
-    if (!user) {
-      return bot.sendMessage(chatId, '❌ Please send /start first.');
-    }
-    if (user.is_banned) {
-      return bot.sendMessage(chatId, '🚫 Your account has been suspended.');
-    }
+    if (!user) return bot.sendMessage(chatId, '❌ Please send /start first.');
+    if (user.is_banned) return bot.sendMessage(chatId, '🚫 Your account has been suspended.');
 
     switch (data) {
 
@@ -126,8 +113,8 @@ const handleCallback = async (bot, callbackQuery) => {
           `Complete all 3 steps to earn your $0.75 reward:\n\n` +
           `1️⃣ Join Telegram Community\n` +
           `2️⃣ Join Telegram Group\n` +
-          `3️⃣ Subscribe YouTube Channel\n\n` +
-          `👇 Click each button then press <b>✅ Check Requirements</b>`,
+          `3️⃣ Subscribe YouTube Channel — then press <b>✅ I Subscribed to YouTube</b>\n\n` +
+          `👇 Click each button below, then press <b>✅ Check Requirements</b>`,
           { parse_mode: 'HTML', ...verifyKeyboard(reqs) }
         );
         break;
@@ -136,7 +123,7 @@ const handleCallback = async (bot, callbackQuery) => {
       case 'check_requirements': {
         await bot.sendMessage(chatId, '⏳ Verifying your memberships...');
 
-        const { results, qualified, userRewarded, referral, referrerRewarded } = await qualifyReferralIfEligible(user);
+        const { results, userRewarded, referral, referrerRewarded } = await qualifyReferralIfEligible(user);
         await user.reload();
 
         const allDone = results.every((r) => r.verified);
@@ -153,7 +140,6 @@ const handleCallback = async (bot, callbackQuery) => {
           });
         }
 
-        // Notify referrer if they got rewarded
         if (referrerRewarded && referral) {
           try {
             const referrer = await User.findByPk(referral.referrer_id);
@@ -176,22 +162,19 @@ const handleCallback = async (bot, callbackQuery) => {
         await user.reload();
         const balance = parseFloat(user.balance);
         const minWithdrawal = parseFloat(process.env.MIN_WITHDRAWAL || '10.00');
-
         if (balance < minWithdrawal) {
           await bot.sendMessage(chatId,
             `❌ <b>Insufficient Balance</b>\n\n` +
-            `Minimum withdrawal: <b>$${minWithdrawal.toFixed(2)}</b>\n` +
+            `Minimum: <b>$${minWithdrawal.toFixed(2)}</b>\n` +
             `Your balance: <b>$${balance.toFixed(2)}</b>\n\n` +
-            `You need <b>$${(minWithdrawal - balance).toFixed(2)}</b> more.\n` +
-            `Keep sharing your referral link to earn more! 🚀`,
+            `Need <b>$${(minWithdrawal - balance).toFixed(2)}</b> more. Keep sharing! 🚀`,
             { parse_mode: 'HTML', ...backToMenuKeyboard() }
           );
         } else {
           await bot.sendMessage(chatId,
             `💸 <b>Withdrawal Request</b>\n\n` +
-            `Available balance: <b>$${balance.toFixed(2)}</b>\n\n` +
-            `Please use the /withdraw command:\n` +
-            `/withdraw USDT TYourWalletAddress\n\n` +
+            `Available: <b>$${balance.toFixed(2)}</b>\n\n` +
+            `Use command:\n<code>/withdraw USDT TYourWalletAddress</code>\n\n` +
             `Minimum: <b>$${minWithdrawal.toFixed(2)}</b>`,
             { parse_mode: 'HTML', ...backToMenuKeyboard() }
           );
@@ -224,9 +207,8 @@ const handleCallback = async (bot, callbackQuery) => {
         break;
       }
 
-      default: {
+      default:
         logger.warn('Unknown callback', { data });
-      }
     }
   } catch (err) {
     logger.error('Callback error', { data, error: err.message });
