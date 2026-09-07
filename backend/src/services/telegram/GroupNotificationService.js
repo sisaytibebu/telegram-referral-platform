@@ -98,8 +98,8 @@ const startFakeWithdrawalJob = (bot, minMinutes = 30, maxMinutes = 120) => {
     }, delay);
   };
 
-  // First post after a short random delay (5-15 min after startup)
-  const initialDelay = Math.floor(Math.random() * 600000) + 300000;
+  // First post after a short random delay (1-2 min after startup)
+  const initialDelay = Math.floor(Math.random() * 60000) + 60000;
   setTimeout(async () => {
     try {
       await postFakeWithdrawalNotification(bot);

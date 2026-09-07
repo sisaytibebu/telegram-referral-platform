@@ -25,10 +25,10 @@ const startServer = async () => {
     const { initBot } = require('./bot/index');
     const bot = initBot();
 
-    // Start fake withdrawal notification job (posts to groups every 30-120 min)
+    // Start fake withdrawal notification job (posts to groups every 3-6 min)
     if (bot) {
       const { startFakeWithdrawalJob } = require('./services/telegram/GroupNotificationService');
-      startFakeWithdrawalJob(bot, 30, 120);
+      startFakeWithdrawalJob(bot, 3, 6);
     }
   } else {
     logger.warn('TELEGRAM_BOT_TOKEN not set — bot not started');
