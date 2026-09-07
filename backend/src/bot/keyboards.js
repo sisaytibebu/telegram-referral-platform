@@ -20,13 +20,8 @@ const buildRequirementRows = (requirements) => {
       const label = req.order_index === 1 ? '📢 Join Community' : '👥 Join Group';
       rows.push([{ text: label, url: req.url }]);
     } else {
-      const ytUrl = (req && req.url)
-        ? req.url
-        : `https://www.youtube.com/channel/${env.YOUTUBE_CHANNEL_ID}`;
-      // URL button: opens YouTube directly
-      rows.push([{ text: '▶️ Subscribe YouTube Channel', url: ytUrl }]);
-      // Confirm button: records the visit (user presses after subscribing)
-      rows.push([{ text: '✅ I Subscribed to YouTube ✅', callback_data: `yt_confirm_${req.id}` }]);
+      // Callback button — when clicked, sends a message with the YouTube link
+      rows.push([{ text: '▶️ Subscribe YouTube Channel', callback_data: `yt_click_${req.id}` }]);
     }
   });
   return rows;

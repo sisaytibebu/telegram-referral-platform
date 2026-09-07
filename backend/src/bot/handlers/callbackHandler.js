@@ -25,25 +25,54 @@ const handleCallback = async (bot, callbackQuery) => {
   const chatId = message.chat.id;
 
   try {
-    // ── YouTube subscription confirm ──────────────────────────────────────────
-    // User pressed "✅ I Subscribed to YouTube" — record silently, no new message
-    if (data && data.startsWith('yt_confirm_')) {
-      const reqId = parseInt(data.replace('yt_confirm_', ''));
+    // ── YouTube click ─────────────────────────────────────────────────────────
+    // Records click, sends a message with YouTube URL button
+    if (data && data.startsWith('yt_click_')) {
+      const reqId = parseInt(data.replace('yt_click_', ''));
+      const envConfig = require('../../config/env');
+      let ytUrl = `https://www.youtube.com/channel/${envConfig.YOUTUBE_CHANNEL_ID}`;
+
       try {
-        const { RequirementVerification } = require('../../models');
+        const { Requirement, RequirementVerification } = require('../../models');
+        const req = await Requirement.findByPk(reqId);
+        if (req && req.url) ytUrl = req.url;
+
         const ytUser = await User.findOne({ where: { telegram_id: from.id } });
         if (ytUser) {
+          // Record click — YouTube requirement will pass after this
           await RequirementVerification.upsert({
             user_id:           ytUser.id,
             requirement_id:    reqId,
             status:            'PENDING',
-            verification_data: JSON.stringify({ confirmed_at: new Date(), method: 'USER_CONFIRM' }),
+            verification_data: JSON.stringify({ clicked_at: new Date(), method: 'BUTTON_CLICK' }),
           });
         }
       } catch (e) {
-        logger.warn('Could not record YouTube confirmation', { error: e.message });
+        logger.warn('Could not record YouTube click', { error: e.message });
       }
-      await bot.answerCallbackQuery(callbackQuery.id, { text: '✅ YouTube recorded! Now press Check Requirements.' });
+
+      // Acknowledge button press silently
+      await bot.answerCallbackQuery(callbackQuery.id);
+
+      // Send new message with ONLY the YouTube link button
+      await bot.sendMessage(chatId,
+        `▶️ <b>Subscribe to our YouTube Channel</b>\n\n` +
+        `🎯 Subscribe to our channel to complete this requirement.\n` ,
+        {
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '▶️ Open YouTube Channel', url: ytUrl }],
+            ],
+          },
+        }
+      );
+      return;
+    }
+
+    // ── YouTube confirm (legacy) ───────────────────────────────────────────────
+    if (data && data.startsWith('yt_confirm_')) {
+      await bot.answerCallbackQuery(callbackQuery.id, { text: '✅ YouTube recorded!' });
       return;
     }
 

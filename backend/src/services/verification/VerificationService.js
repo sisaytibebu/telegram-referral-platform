@@ -41,16 +41,16 @@ const checkAllRequirements = async (user) => {
       verified = await checkMembership(req.telegram_chat_id, user.telegram_id);
       method = 'TELEGRAM_API';
     } else if (req.type === 'YOUTUBE') {
-      // YouTube passes ONLY if user pressed "✅ I Subscribed to YouTube" button
+      // YouTube passes ONLY if user clicked the ▶️ Subscribe YouTube Channel button
       try {
-        const confirmRecord = await RequirementVerification.findOne({
+        const clickRecord = await RequirementVerification.findOne({
           where: { user_id: user.id, requirement_id: req.id },
         });
-        verified = !!(confirmRecord && ['PENDING', 'VERIFIED'].includes(confirmRecord.status));
+        verified = !!(clickRecord && ['PENDING', 'VERIFIED'].includes(clickRecord.status));
       } catch (e) {
         verified = false;
       }
-      method = 'USER_CONFIRM';
+      method = 'BUTTON_CLICK';
     }
 
     // Update verification record — never overwrite YouTube click records
